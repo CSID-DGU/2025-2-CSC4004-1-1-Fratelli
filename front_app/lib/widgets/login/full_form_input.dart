@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class FullFormInput extends StatelessWidget {
   final String text;
@@ -33,10 +34,9 @@ class FullFormInput extends StatelessWidget {
                   child: Text(
                     text,
                     textAlign: TextAlign.left,
-                    style: const TextStyle(
-                      color: Color.fromRGBO(246, 240, 240, 1),
+                    style: GoogleFonts.k2d(
+                      color: Color.fromRGBO(29, 5, 35, 1),
                       fontSize: 20,
-                      fontFamily: 'Inter',
                       fontWeight: FontWeight.w500,
                       height: 0.06,
                     ),
@@ -66,10 +66,9 @@ class FullFormInput extends StatelessWidget {
                       obscureText: isPassword,
                       decoration: InputDecoration(
                         hintText: text2,
-                        hintStyle: const TextStyle(
-                          color: Color.fromRGBO(39, 0, 93, 1),
+                        hintStyle: GoogleFonts.k2d(
+                          color: Color.fromRGBO(140, 140, 140, 1),
                           fontSize: 15,
-                          fontFamily: 'Inter',
                           fontWeight: FontWeight.w500,
                         ),
                         border: InputBorder.none,
@@ -79,9 +78,8 @@ class FullFormInput extends StatelessWidget {
                         ),
                         prefixIcon: prefixIcon,
                       ),
-                      style: const TextStyle(
+                      style: GoogleFonts.k2d(
                         fontSize: 15,
-                        fontFamily: 'Inter',
                         fontWeight: FontWeight.w500,
                       ),
                     ),

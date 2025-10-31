@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class FullButton extends StatelessWidget {
   final String text;
@@ -39,10 +40,9 @@ class FullButton extends StatelessWidget {
                       child: Text(
                         text,
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Color.fromRGBO(39, 0, 93, 1.0),
+                        style: GoogleFonts.k2d(
+                          color: Color.fromRGBO(140, 140, 140, 1),
                           fontSize: 16,
-                          fontFamily: 'Pretendard',
                           fontWeight: FontWeight.w600,
                           height: 0.09,
                         ),

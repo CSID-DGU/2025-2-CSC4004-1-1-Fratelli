@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class LoginButton extends StatelessWidget {
   final String text;
@@ -48,10 +49,9 @@ class LoginButton extends StatelessWidget {
                     child: Text(
                       text,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: GoogleFonts.k2d(
                         color: Colors.white,
                         fontSize: 16,
-                        fontFamily: 'Pretendard',
                         fontWeight: FontWeight.w600,
                         height: 0.99,
                       ),
