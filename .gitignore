@@ -1,3 +1,7 @@
+# Real-Time-Voice-Cloning 폴더 전체를 무시
+Real-Time-Voice-Cloning/
+
+
 # Audio/Video files
 *.wav
 *.mp4
