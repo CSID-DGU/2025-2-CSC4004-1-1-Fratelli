@@ -5,6 +5,7 @@ class FullFormInput extends StatelessWidget {
   final String text2;
   final bool isPassword;
   final TextEditingController? controller;
+  final Widget? prefixIcon;
 
   const FullFormInput({
     super.key,
@@ -12,6 +13,7 @@ class FullFormInput extends StatelessWidget {
     required this.text2,
     this.isPassword = false,
     this.controller,
+    this.prefixIcon,
   });
 
   @override
@@ -75,6 +77,7 @@ class FullFormInput extends StatelessWidget {
                           horizontal: 20,
                           vertical: 20,
                         ),
+                        prefixIcon: prefixIcon,
                       ),
                       style: const TextStyle(
                         fontSize: 15,
