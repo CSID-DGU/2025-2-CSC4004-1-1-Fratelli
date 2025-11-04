@@ -1,4 +1,4 @@
-# LMB.py  (Landmark Breaker - SPSA/Blackbox, GPU 강제 기본 + LandmarksType 호환)
+# LMB.py  (Landmark Breaker - SPSA/Blackbox, GPU 강제 기본 + LandmarksType 호환 + RGB fix)
 # Usage (예시):
 #   python LMB.py \
 #     --input ../input/testvideo_480p.mp4 \
@@ -118,14 +118,16 @@ def spsa_step(image01: np.ndarray,
 
         # +delta
         img_p = np.clip(image01 + delta * u, 0.0, 1.0)
-        lm_p = fa_detector.get_landmarks((to_uint8(img_p[:, :, ::-1])))  # fa는 BGR 입력 선호
+        # RGB 그대로 전달 (FIX)
+        lm_p = fa_detector.get_landmarks(to_uint8(img_p))
         lm_p = largest_face(lm_p)
         hm_p = make_heatmap_from_landmarks(lm_p, H, W, sigma_pix=sigma_pix, k=k)
         Lp = cosine_similarity(hm_p, baseline_hm)
 
         # -delta
         img_m = np.clip(image01 - delta * u, 0.0, 1.0)
-        lm_m = fa_detector.get_landmarks((to_uint8(img_m[:, :, ::-1])))
+        # RGB 그대로 전달 (FIX)
+        lm_m = fa_detector.get_landmarks(to_uint8(img_m))
         lm_m = largest_face(lm_m)
         hm_m = make_heatmap_from_landmarks(lm_m, H, W, sigma_pix=sigma_pix, k=k)
         Lm = cosine_similarity(hm_m, baseline_hm)
@@ -156,8 +158,8 @@ def attack_frame_blackbox(frame_bgr: np.ndarray,
     H, W = frame_bgr.shape[:2]
     img01 = from_uint8(cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB))  # [0,1], RGB
 
-    # 기준 랜드마크/히트맵
-    lm0 = fa_detector.get_landmarks(to_uint8(img01[:, :, ::-1]))  # BGR
+    # 기준 랜드마크/히트맵 — RGB 그대로 전달 (FIX)
+    lm0 = fa_detector.get_landmarks(to_uint8(img01))
     lm0 = largest_face(lm0)
     hm0 = make_heatmap_from_landmarks(lm0, H, W, sigma_pix=sigma_pix, k=k)
 
@@ -185,7 +187,7 @@ def attack_frame_blackbox(frame_bgr: np.ndarray,
 
         if debug_prefix:
             cv2.imwrite(f"{debug_prefix}_t{t:02d}.png",
-                cv2.cvtColor(to_uint8(x_adv), cv2.COLOR_RGB2BGR))
+                        cv2.cvtColor(to_uint8(x_adv), cv2.COLOR_RGB2BGR))
 
     out = cv2.cvtColor(to_uint8(x_adv), cv2.COLOR_RGB2BGR)
     return out
@@ -270,7 +272,6 @@ def resolve_landmarks_type_2d():
     try:
         LT = face_alignment.LandmarksType
     except Exception:
-        # 극히 드문 경우: 모듈에서 바로 상수만 제공되는 경우 대비
         for name in ["_2D", "TWO_D"]:
             if hasattr(face_alignment, name):
                 return getattr(face_alignment, name)
