@@ -1,15 +1,16 @@
 package com.example.deepflect.Entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
 
-@Data
 @Entity
 @Getter
 @Setter
 @Table(name="users")
+@ToString(exclude = "userTokens")
 @NoArgsConstructor
 @AllArgsConstructor
 public class Users{
@@ -45,7 +46,9 @@ public class Users{
         this.updatedAt = LocalDateTime.now();
     }
 
-
-
+    // 양방향 매핑
+    @JsonIgnore
+    @OneToOne(mappedBy = "user", cascade = CascadeType.PERSIST, orphanRemoval = true, fetch = FetchType.LAZY)
+    private UserTokens userTokens;
 
 }
