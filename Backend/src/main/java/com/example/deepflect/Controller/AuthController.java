@@ -80,7 +80,7 @@ public class AuthController {
 //            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 //        }
 
-        String email = updateUserRequest.getEmail(); // JWT 인증 시 email로 설정했다고 가정
+        String email = updateUserRequest.getEmail(); // email로 JWT 인증
         System.out.println("-------------------------------------------------");
         System.out.println(email);
         System.out.println("-------------------------------------------------");
