@@ -1,6 +1,9 @@
 package com.example.deepflect.Jwt;
 
 import com.example.deepflect.DTO.LoginResponse;
+import com.example.deepflect.Entity.Users;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 
@@ -17,6 +20,8 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.Date;
 
+import static javax.crypto.Cipher.SECRET_KEY;
+
 @Slf4j
 @Component
 public class JwtTokenProvider {
@@ -26,57 +31,74 @@ public class JwtTokenProvider {
     private final long ACCESS_TOKEN_EXPIRATION_MS = 1000L * 60 * 30; // 30분
     private final long REFRESH_TOKEN_EXPIRATION_MS = 1000L * 60 * 60 * 24 * 7; // 7일
 
-    // 비밀 키 설정 메소드
     private SecretKey getSigningKey() {
-        // 비밀 키 문자열을 HMAC SHA-256 키로 변환
         return Keys.hmacShaKeyFor(secretKeyString.getBytes(StandardCharsets.UTF_8));
     }
 
-    //  JWT 토큰 생성 로직의 중복을 제거
     private String generateToken(String subject, long expirationMs) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + expirationMs);
+
+        log.debug("[JWT 생성] subject={}, now={}, exp={}", subject, now, expiryDate);
 
         return Jwts.builder()
                 .setSubject(subject)
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
+                // 필요 시 roles 등 claims 추가
+                //.claim("roles", roles)
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
-    // 만료 시간을 ZonedDateTime으로 변환
-    private ZonedDateTime calculateExpirationTime(long expirationMs) {
-        long futureTimeMs = System.currentTimeMillis() + expirationMs;
-        // 밀리초를 Instant로 변환한 후 UTC (ZoneOffset.UTC)의 ZonedDateTime으로 변환
-        return Instant.ofEpochMilli(futureTimeMs).atZone(ZoneOffset.UTC);
-    }
-
-    // Access Token + Refresh Token 모두 발급
     public LoginResponse createTokenResponse(Authentication authentication) {
-        // 1. 사용자 이메일(또는 ID) 추출
         String userEmail = authentication.getName();
 
-        // 2. Access Token 생성
-        String accessToken = generateToken(userEmail, ACCESS_TOKEN_EXPIRATION_MS);
+        System.out.println("=======================================");
+        System.out.println(userEmail);
+        System.out.println("=======================================");
 
-        // 3. Refresh Token 생성
+        String accessToken = generateToken(userEmail, ACCESS_TOKEN_EXPIRATION_MS);
         String refreshToken = generateToken(userEmail, REFRESH_TOKEN_EXPIRATION_MS);
 
-        // 4. 만료 시간 계산
-        ZonedDateTime accessExpiry = calculateExpirationTime(ACCESS_TOKEN_EXPIRATION_MS);
-        ZonedDateTime refreshExpiry = calculateExpirationTime(REFRESH_TOKEN_EXPIRATION_MS);
+        ZonedDateTime accessExpiry = Instant.ofEpochMilli(System.currentTimeMillis() + ACCESS_TOKEN_EXPIRATION_MS).atZone(ZoneOffset.UTC);
+        ZonedDateTime refreshExpiry = Instant.ofEpochMilli(System.currentTimeMillis() + REFRESH_TOKEN_EXPIRATION_MS).atZone(ZoneOffset.UTC);
 
-        // 5. 응답 생성
-        return new LoginResponse(
-                accessToken,
-                refreshToken,
-                accessExpiry,
-                refreshExpiry
-        );
+        return new LoginResponse(accessToken, refreshToken, accessExpiry, refreshExpiry);
     }
 
+    public boolean validateToken(String token) {
+        try {
+            Jwts.parser()
+                    .setSigningKey(getSigningKey())
+                    .setAllowedClockSkewSeconds(60) // 1분 유예
+                    .build()
+                    .parseClaimsJws(token);
 
+            return true;
+        } catch (ExpiredJwtException e) {
+            log.error("Token expired at: {}", e.getClaims().getExpiration());
+            log.error("Server time: {}", new Date());
+            return false;
+        } catch (JwtException | SecurityException e) {
+            log.error("Invalid token: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    public String extractEmail(String token) {
+        try {
+            return Jwts.parser()
+                    .setSigningKey(getSigningKey())
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody()
+                    .getSubject();
+        } catch (JwtException e) {
+            log.error("토큰에서 이메일 추출 실패: {}", e.getMessage());
+            return null;
+        }
+    }
 
 
 }
