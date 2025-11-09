@@ -19,10 +19,15 @@ class FullFormInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 화면 너비에서 양쪽 여백을 뺀 크기 계산
+    final screenWidth = MediaQuery.of(context).size.width;
+    final horizontalPadding = 24.0; // 양쪽 여백
+    final inputWidth = screenWidth - (horizontalPadding * 2);
+    
     return Column(
       children: [
         Container(
-          width: 333,
+          width: inputWidth,
           height: 80,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -49,12 +54,12 @@ class FullFormInput extends StatelessWidget {
               Expanded(
                 flex: 10,
                 child: Container(
-                  width:333,
+                  width: inputWidth,
                   height:53,
                   decoration: ShapeDecoration(
                     shape: RoundedRectangleBorder(
                       side: const BorderSide(
-                        width: 1,
+                        width: 1.3,
                         color: Color.fromRGBO(39, 0, 93, 1)
                         ),
                         borderRadius: BorderRadius.circular(15),
