@@ -1,16 +1,39 @@
+import 'package:deepflect_app/pages/login/landing.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:deepflect_app/firebase_options.dart';
 import 'package:deepflect_app/pages/home/home_page.dart';
 import 'package:deepflect_app/services/fcm_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // FCM 초기화 (에러가 발생해도 앱은 계속 실행)
+  // Firebase 초기화
   try {
-    await FcmService.initialize();
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    print('Firebase 초기화 완료');
+  
+  // FCM 초기화
+    try {
+      await FcmService.initialize();
+      print('FCM 초기화 완료');
+    } catch (e) {
+      print('FCM 초기화 실패: $e');
+    }
   } catch (e) {
-    print('FCM 초기화 실패 (앱은 계속 실행됩니다): $e');
+    print('Firebase 초기화 실패: $e');
+  }
+  
+  // 환경 변수 로드
+  try {
+    await dotenv.load(fileName: ".env");
+    print('환경 변수 로드 완료');
+  } catch (e) {
+    print('환경 변수 로드 실패 (앱은 계속 실행됩니다): $e');
   }
   
   runApp(const ProviderScope(child: MyApp()));
@@ -130,7 +153,7 @@ class _MyHomePageState extends State<MyHomePage> {
           _incrementCounter();
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => HomePage()),
+            MaterialPageRoute(builder: (context) => LandingPage()),
           );
         },
         tooltip: 'Increment',

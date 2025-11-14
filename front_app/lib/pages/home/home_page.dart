@@ -14,10 +14,16 @@ class HomePage extends ConsumerStatefulWidget {
 
 class _HomePageState extends ConsumerState<HomePage> {
   int _currentIndex = 1; // 홈(업로드) 페이지가 기본
+  final GlobalKey<FileHistoryPageState> _historyPageKey = GlobalKey<FileHistoryPageState>();
 
-  final List<Widget> _pages = [
-    FileHistoryPage(), // 히스토리 페이지 (index 0)
-    FileUploadPage(), // 업로드 페이지 (홈) (index 1)
+  List<Widget> get _pages => [
+    FileHistoryPage(key: _historyPageKey, stateKey: _historyPageKey), // 히스토리 페이지 (index 0)
+    FileUploadPage(
+      onUploadSuccess: () {
+        // 업로드 성공 시 히스토리 페이지 새로고침
+        _historyPageKey.currentState?.refresh();
+      },
+    ), // 업로드 페이지 (홈) (index 1)
     const MyPage(), // 마이페이지 (index 2)
   ];
 
