@@ -7,6 +7,7 @@ class FullFormInput extends StatelessWidget {
   final bool isPassword;
   final TextEditingController? controller;
   final Widget? prefixIcon;
+  final String? Function(String?)? validator;
 
   const FullFormInput({
     super.key,
@@ -15,8 +16,8 @@ class FullFormInput extends StatelessWidget {
     this.isPassword = false,
     this.controller,
     this.prefixIcon,
+    this.validator,
   });
-
   @override
   Widget build(BuildContext context) {
     // 화면 너비에서 양쪽 여백을 뺀 크기 계산
@@ -66,28 +67,53 @@ class FullFormInput extends StatelessWidget {
                         ),
                         // 그림자 제거
                     ),
-                    child: TextField(
-                      controller: controller,
-                      obscureText: isPassword,
-                      decoration: InputDecoration(
-                        hintText: text2,
-                        hintStyle: GoogleFonts.k2d(
-                          color: Color.fromRGBO(140, 140, 140, 1),
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 20,
-                        ),
-                        prefixIcon: prefixIcon,
-                      ),
-                      style: GoogleFonts.k2d(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                    child: validator != null
+                        ? TextFormField(
+                            controller: controller,
+                            obscureText: isPassword,
+                            validator: validator,
+                            decoration: InputDecoration(
+                              hintText: text2,
+                              hintStyle: GoogleFonts.k2d(
+                                color: Color.fromRGBO(140, 140, 140, 1),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 20,
+                              ),
+                              prefixIcon: prefixIcon,
+                              errorStyle: const TextStyle(fontSize: 0, height: 0),
+                            ),
+                            style: GoogleFonts.k2d(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          )
+                        : TextField(
+                            controller: controller,
+                            obscureText: isPassword,
+                            decoration: InputDecoration(
+                              hintText: text2,
+                              hintStyle: GoogleFonts.k2d(
+                                color: Color.fromRGBO(140, 140, 140, 1),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 20,
+                              ),
+                              prefixIcon: prefixIcon,
+                            ),
+                            style: GoogleFonts.k2d(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                   ),
                 ),
             ],

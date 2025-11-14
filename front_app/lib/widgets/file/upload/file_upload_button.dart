@@ -69,7 +69,7 @@ class _FileSelectButtonState extends State<FileUploadButton> {
                 : const Icon(
                     Icons.upload_file,
                     size: 40,
-                    color: Color(0xFF27005D),
+                    color: Color(0xFF9400FF),
                   ),
             const SizedBox(height: 16),
             const Text(
