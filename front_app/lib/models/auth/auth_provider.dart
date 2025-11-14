@@ -33,6 +33,46 @@ class AuthNotifier extends _$AuthNotifier {
     }
   }
 
+  // 회원가입
+  Future<void> register(String email, String password) async {
+    state = state.copyWith(isLoading: true, error: null);
+    
+    try {
+      final loginResponse = await _authService.register(email, password);
+      
+      // 토큰 저장
+      await TokenStorage.saveTokens(
+        accessToken: loginResponse.accessToken,
+        refreshToken: loginResponse.refreshToken,
+      );
+      
+      // FCM 토큰 등록
+      final fcmToken = await FcmService.getFcmToken();
+      if (fcmToken != null) {
+        try {
+          await _authService.registerDevice(fcmToken);
+          print('FCM 토큰 등록 성공');
+        } catch (e) {
+          print('FCM 토큰 등록 실패: $e');
+          // FCM 토큰 등록 실패는 회원가입을 막지 않음
+        }
+      }
+      
+      state = state.copyWith(
+        isLoading: false,
+        isAuthenticated: true,
+        accessToken: loginResponse.accessToken,
+        refreshToken: loginResponse.refreshToken,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e.toString().replaceAll('Exception: ', ''),
+      );
+      rethrow; // 에러를 다시 throw하여 UI에서 처리할 수 있도록
+    }
+  }
+
   // 로그인
   Future<void> login(String email, String password) async {
     state = state.copyWith(isLoading: true, error: null);
@@ -75,6 +115,15 @@ class AuthNotifier extends _$AuthNotifier {
   // 로그아웃
   Future<void> logout() async {
     try {
+      // 서버에 로그아웃 요청
+      try {
+        await _authService.logout();
+        print('로그아웃 API 호출 성공');
+      } catch (e) {
+        print('로그아웃 API 호출 실패: $e');
+        // API 호출 실패해도 로컬 로그아웃은 진행
+      }
+      
       // FCM 토큰 삭제
       final fcmToken = await FcmService.getFcmToken();
       if (fcmToken != null) {
@@ -99,6 +148,63 @@ class AuthNotifier extends _$AuthNotifier {
       // 오류가 발생해도 로컬 상태는 초기화
       await TokenStorage.deleteTokens();
       state = const AuthState();
+    }
+  }
+
+  // 회원 정보 수정
+  Future<UserInfo> updateUser(Map<String, dynamic> userData) async {
+    state = state.copyWith(isLoading: true, error: null);
+    
+    try {
+      final updatedUser = await _authService.updateUser(userData);
+      
+      state = state.copyWith(
+        isLoading: false,
+        userInfo: updatedUser,
+      );
+      
+      return updatedUser;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e.toString().replaceAll('Exception: ', ''),
+      );
+      rethrow;
+    }
+  }
+
+  // 회원탈퇴
+  Future<void> quit() async {
+    state = state.copyWith(isLoading: true, error: null);
+    
+    try {
+      // 서버에 회원탈퇴 요청
+      await _authService.quit();
+      
+      // FCM 토큰 삭제
+      final fcmToken = await FcmService.getFcmToken();
+      if (fcmToken != null) {
+        try {
+          await _authService.deleteDevice(fcmToken);
+          print('FCM 토큰 삭제 성공');
+        } catch (e) {
+          print('FCM 토큰 삭제 실패: $e');
+        }
+      }
+      
+      // FCM 토큰 로컬 삭제
+      await FcmService.deleteFcmToken();
+      
+      // 토큰 삭제
+      await TokenStorage.deleteTokens();
+      
+      state = const AuthState();
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e.toString().replaceAll('Exception: ', ''),
+      );
+      rethrow;
     }
   }
 
