@@ -6,8 +6,20 @@ class ApiService {
   late final Dio _dio;
   
   ApiService() {
+    // dotenv가 초기화되지 않았을 때를 대비한 안전한 처리
+    String baseUrl = 'http://localhost:3000';
+    try {
+      final apiHost = dotenv.env['API_HOST'];
+      if (apiHost != null && apiHost.isNotEmpty) {
+        baseUrl = apiHost;
+      }
+    } catch (e) {
+      // dotenv가 초기화되지 않았거나 접근할 수 없는 경우 기본값 사용
+      print('dotenv 접근 실패, 기본 URL 사용: $e');
+    }
+    
     _dio = Dio(BaseOptions(
-      baseUrl: dotenv.env['API_HOST'] ?? 'http://localhost:3000',
+      baseUrl: baseUrl,
       headers: {
         'Content-Type': 'application/json',
       },
@@ -47,20 +59,27 @@ class ApiService {
     }
   }
 
-  Future<Response> postWithAuth(String endpoint, {dynamic data}) async {
+  Future<Response> postWithAuth(String endpoint, {dynamic data, bool isMultipart = false}) async {
     final accessToken = await TokenStorage.getAccessToken();
     if (accessToken == null) {
       throw Exception('액세스 토큰이 없습니다. 로그인이 필요합니다.');
     }
 
     try {
+      final headers = <String, dynamic>{
+        'Authorization': 'Bearer $accessToken',
+      };
+      
+      // multipart/form-data인 경우 Content-Type 헤더를 설정하지 않음 (Dio가 자동 설정)
+      if (!isMultipart) {
+        headers['Content-Type'] = 'application/json';
+      }
+
       final response = await _dio.post(
         endpoint,
         data: data,
         options: Options(
-          headers: {
-            'Authorization': 'Bearer $accessToken',
-          },
+          headers: headers,
         ),
       );
       
@@ -85,6 +104,36 @@ class ApiService {
 
     try {
       final response = await _dio.put(
+        endpoint,
+        data: data,
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $accessToken',
+          },
+        ),
+      );
+      
+      if (response.statusCode == 403) {
+        throw Exception('접근 권한이 없습니다. 토큰이 만료되었을 수 있습니다.');
+      }
+      
+      return response;
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 403) {
+        throw Exception('접근 권한이 없습니다. 토큰이 만료되었을 수 있습니다.');
+      }
+      throw Exception('네트워크 오류가 발생했습니다: ${e.message}');
+    }
+  }
+
+  Future<Response> patchWithAuth(String endpoint, {dynamic data}) async {
+    final accessToken = await TokenStorage.getAccessToken();
+    if (accessToken == null) {
+      throw Exception('액세스 토큰이 없습니다. 로그인이 필요합니다.');
+    }
+
+    try {
+      final response = await _dio.patch(
         endpoint,
         data: data,
         options: Options(

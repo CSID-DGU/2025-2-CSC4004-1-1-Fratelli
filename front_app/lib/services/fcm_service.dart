@@ -10,6 +10,8 @@ class FcmService {
   // FCM 초기화
   static Future<void> initialize() async {
     try {
+      print('FCM 초기화 시작...');
+      
       // 로컬 알림 초기화
       const AndroidInitializationSettings initializationSettingsAndroid =
           AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -24,18 +26,29 @@ class FcmService {
       );
       
       await _localNotifications.initialize(initializationSettings);
+      print('로컬 알림 초기화 완료');
       
-      // 포그라운드 메시지 핸들러 설정
-      FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
-      
-      // 백그라운드 메시지 핸들러 설정
-      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+      // Firebase Messaging 초기화 시도
+      try {
+        // 포그라운드 메시지 핸들러 설정
+        FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
+        print('포그라운드 메시지 핸들러 설정 완료');
+        
+        // 백그라운드 메시지 핸들러 설정
+        FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+        print('백그라운드 메시지 핸들러 설정 완료');
+      } catch (firebaseError) {
+        print('Firebase Messaging 설정 실패 (로컬 알림만 사용): $firebaseError');
+        // Firebase가 설정되지 않아도 로컬 알림은 사용 가능
+      }
       
       _isInitialized = true;
       print('FCM 초기화 완료');
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('FCM 초기화 실패: $e');
+      print('스택 트레이스: $stackTrace');
       _isInitialized = false;
+      // 에러를 다시 throw하지 않음 - 앱이 계속 실행되도록
     }
   }
 
