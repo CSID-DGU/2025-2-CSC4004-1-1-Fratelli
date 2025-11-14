@@ -1,8 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:deepflect_app/widgets/file/upload/file_upload_button.dart';
 import 'package:deepflect_app/widgets/file/upload/upload_progress_button.dart';
 import 'package:deepflect_app/pages/file/upload/file_preview_page.dart';
+import 'package:deepflect_app/services/file_service.dart';
 
 class FileUploadPage extends StatefulWidget {
   const FileUploadPage({super.key});
@@ -12,36 +15,134 @@ class FileUploadPage extends StatefulWidget {
 }
 
 class _FileUploadPageState extends State<FileUploadPage> {
+  final FileService _fileService = FileService();
   List<Map<String, dynamic>> files = [];
 
-  void _onFileSelected(String fileName, String fileSize) {
-    setState(() {
-      files.add({
-        "name": fileName,
-        "size": fileSize,
-        "progress": 0.0,
-        "status": "uploading",
-      });
-    });
-
-    Future.delayed(const Duration(milliseconds: 500), () {
-      _simulateProgress(files.length - 1);
-    });
+  String _determineFileType(String fileName) {
+    final extension = fileName.toLowerCase().split('.').last;
+    if (extension == 'mp4' || extension == 'mp3') {
+      return 'video';
+    } else if (extension == 'jpg' || extension == 'jpeg' || extension == 'png') {
+      return 'image';
+    }
+    return 'image'; // 기본값
   }
 
-  void _simulateProgress(int index) async {
-    for (int i = 1; i <= 10; i++) {
-      await Future.delayed(const Duration(milliseconds: 300));
-      if (!mounted) return;
+  Future<void> _onFileSelected(List<PlatformFile> selectedFiles) async {
+    for (var platformFile in selectedFiles) {
+      final fileName = platformFile.name;
+      final fileSize = "${(platformFile.size / 1024).toStringAsFixed(2)} KB";
+      final fileType = _determineFileType(fileName);
+      
+      // 파일이 로컬 경로를 가지고 있는지 확인
+      if (platformFile.path == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('파일 경로를 가져올 수 없습니다: $fileName'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        continue;
+      }
+
+      final file = File(platformFile.path!);
+      if (!await file.exists()) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('파일을 찾을 수 없습니다: $fileName'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        continue;
+      }
+
+      final fileIndex = files.length;
       setState(() {
-        files[index]["progress"] = i / 10.0;
+        files.add({
+          "name": fileName,
+          "size": fileSize,
+          "progress": 0.0,
+          "status": "uploading",
+          "file": file,
+          "fileType": fileType,
+          "tempFileId": null, // 업로드 시작 후 서버에서 받은 tempFileId
+        });
       });
+
+      // 실제 업로드 시작
+      _uploadFile(fileIndex, file, fileType);
     }
-    // 완료 처리
-    setState(() {
-      files[index]["status"] =
-          (index % 3 == 0) ? "error" : (files[index]["name"].endsWith(".mp4") ? "done" : "done");
-    });
+  }
+
+  Future<void> _uploadFile(int index, File file, String type) async {
+    try {
+      final response = await _fileService.uploadFile(file, type);
+      
+      if (!mounted) return;
+
+      setState(() {
+        files[index]["tempFileId"] = response['tempFileId'];
+        files[index]["status"] = "done";
+        files[index]["progress"] = 1.0;
+        files[index]["fileId"] = response['fileId'];
+      });
+    } catch (e) {
+      if (!mounted) return;
+      
+      setState(() {
+        files[index]["status"] = "error";
+        files[index]["error"] = e.toString().replaceAll('Exception: ', '');
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('업로드 실패: ${files[index]["name"]}\n${files[index]["error"]}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  Future<void> _cancelUpload(int index) async {
+    final file = files[index];
+    final tempFileId = file["tempFileId"];
+
+    if (tempFileId == null) {
+      // 아직 업로드가 시작되지 않았거나 완료된 경우
+      setState(() {
+        files.removeAt(index);
+      });
+      return;
+    }
+
+    try {
+      await _fileService.cancelUpload(tempFileId.toString());
+      if (mounted) {
+        setState(() {
+          files.removeAt(index);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('업로드가 취소되었습니다.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('업로드 취소 실패: ${e.toString().replaceAll('Exception: ', '')}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   UploadStatus _convertStatus(String status) {
@@ -58,7 +159,8 @@ class _FileUploadPageState extends State<FileUploadPage> {
   }
 
   UploadType _determineUploadType(String fileName) {
-    if (fileName.endsWith(".mp4")) return UploadType.video;
+    final extension = fileName.toLowerCase().split('.').last;
+    if (extension == 'mp4' || extension == 'mp3') return UploadType.video;
     return UploadType.image;
   }
 
@@ -89,14 +191,7 @@ class _FileUploadPageState extends State<FileUploadPage> {
               ),
               const SizedBox(height: 24),
               FileUploadButton(
-                onFilesSelected: (selectedFiles) {
-                  for (var file in selectedFiles) {
-                    _onFileSelected(
-                      file.name,
-                      "${(file.size / 1024).toStringAsFixed(2)} KB",
-                    );
-                  }
-                },
+                onFilesSelected: _onFileSelected,
               ),
               const SizedBox(height: 24),
               // 작업 목록 구분선 및 제목
@@ -150,9 +245,7 @@ class _FileUploadPageState extends State<FileUploadPage> {
                         ),
                       ),
                       onDismissed: (direction) {
-                        setState(() {
-                          files.removeAt(index);
-                        });
+                        _cancelUpload(index);
                       },
                       child: UploadProgressButton(
                         fileName: file["name"],
@@ -160,32 +253,100 @@ class _FileUploadPageState extends State<FileUploadPage> {
                         progress: file["progress"],
                         status: _convertStatus(file["status"]),
                         type: _determineUploadType(file["name"]),
-                        onPreview: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => FilePreviewPage(
-                                fileName: file["name"],
-                                filePath: "assets/images/${file["name"]}", // 예시 경로
+                        onPreview: () async {
+                          final fileId = file["fileId"];
+                          if (fileId != null) {
+                            try {
+                              final previewData = await _fileService.getPreview(fileId.toString());
+                              final previewUrl = previewData['previewUrl']?.toString() ?? 
+                                               previewData['url']?.toString() ?? '';
+                              
+                              if (mounted) {
+                                if (previewUrl.isNotEmpty) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => FilePreviewPage(
+                                        fileName: file["name"],
+                                        filePath: previewUrl,
+                                      ),
+                                    ),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('미리보기 URL을 가져올 수 없습니다.'),
+                                      backgroundColor: Colors.orange,
+                                    ),
+                                  );
+                                }
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('미리보기 실패: ${e.toString().replaceAll('Exception: ', '')}'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('파일 미리보기를 사용할 수 없습니다.'),
+                                backgroundColor: Colors.orange,
                               ),
-                            ),
-                          );
+                            );
+                          }
                         },
-                        onDownload: () {
-                          // 영상 다운로드
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('${file["name"]} 다운로드를 시작합니다.'),
-                              duration: const Duration(seconds: 2),
-                            ),
-                          );
-                          // TODO: 실제 다운로드 API 호출 구현 필요
-                          // 예: ApiService를 통해 서버에서 파일 다운로드 후 로컬 저장
+                        onDownload: () async {
+                          final fileId = file["fileId"];
+                          if (fileId != null) {
+                            try {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('${file["name"]} 다운로드를 시작합니다.'),
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                              
+                              final savedPath = await _fileService.downloadFile(
+                                fileId.toString(),
+                                file["name"],
+                              );
+                              
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('파일이 저장되었습니다: $savedPath'),
+                                    backgroundColor: Colors.green,
+                                    duration: const Duration(seconds: 3),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('다운로드 실패: ${e.toString().replaceAll('Exception: ', '')}'),
+                                    backgroundColor: Colors.red,
+                                    duration: const Duration(seconds: 3),
+                                  ),
+                                );
+                              }
+                            }
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('다운로드할 수 없는 파일입니다.'),
+                                backgroundColor: Colors.orange,
+                              ),
+                            );
+                          }
                         },
                         onDelete: () {
-                          setState(() {
-                            files.removeAt(index);
-                          });
+                          _cancelUpload(index);
                         },
                       ),
                     );
