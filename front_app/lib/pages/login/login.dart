@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:deepflect_app/models/auth/auth_provider.dart';
-import 'package:deepflect_app/pages/file/upload/file_upload_page.dart';
+import 'package:deepflect_app/pages/home/home_page.dart';
 import 'package:deepflect_app/pages/login/sign_up.dart';
 import 'package:deepflect_app/widgets/login/full_form_input.dart';
 import 'package:deepflect_app/widgets/login/text_button.dart' as custom;
@@ -60,7 +60,7 @@ class _LoginMainState extends ConsumerState<LoginMain> {
         // 메인 페이지로 이동 (이전 버튼 없애기)
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
-            builder: (context) => const FileUploadPage(),
+            builder: (context) => const HomePage(),
           ),
           (route) => false, // 모든 이전 라우트 제거
         );
