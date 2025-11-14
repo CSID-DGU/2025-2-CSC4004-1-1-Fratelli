@@ -1,16 +1,39 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:deepflect_app/services/notification_service.dart';
 
 class NotificationItem {
+  final String id;
   final String title;
   final String date; // yyyy-MM-dd 형식 저장
 
-  NotificationItem({required this.title, required this.date});
+  NotificationItem({
+    required this.id,
+    required this.title,
+    required this.date,
+  });
 
-  Map<String, dynamic> toJson() => {'title': title, 'date': date};
-  factory NotificationItem.fromJson(Map<String, dynamic> json) =>
-      NotificationItem(title: json['title'], date: json['date']);
+  factory NotificationItem.fromJson(Map<String, dynamic> json) {
+    // API 응답 형식에 맞게 조정
+    final id = json['id']?.toString() ?? json['notificationId']?.toString() ?? '';
+    final title = json['title']?.toString() ?? json['message']?.toString() ?? '';
+    final dateStr = json['createdAt']?.toString() ?? json['date']?.toString() ?? DateTime.now().toIso8601String();
+    
+    // 날짜 형식 변환 (ISO8601 또는 yyyy-MM-dd)
+    String formattedDate = dateStr;
+    try {
+      final date = DateTime.parse(dateStr);
+      formattedDate = date.toIso8601String().split('T')[0]; // yyyy-MM-dd 형식으로 변환
+    } catch (e) {
+      formattedDate = DateTime.now().toIso8601String().split('T')[0];
+    }
+    
+    return NotificationItem(
+      id: id,
+      title: title,
+      date: formattedDate,
+    );
+  }
 }
 
 class NotificationScreen extends StatefulWidget {
@@ -20,39 +43,66 @@ class NotificationScreen extends StatefulWidget {
   State<NotificationScreen> createState() => _NotificationScreenState();
 }
 
-class _NotificationScreenState extends State<NotificationScreen> {
+class _NotificationScreenState extends State<NotificationScreen> with WidgetsBindingObserver {
+  final NotificationService _notificationService = NotificationService();
   List<NotificationItem> notifications = [];
   bool isDeleteMode = false; // 삭제 모드 여부
   Set<int> selectedIndices = {}; // 선택된 항목의 인덱스 집합
   bool isAllSelected = false;
+  bool _isLoading = true;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadNotifications();
   }
 
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // 앱이 포그라운드로 돌아올 때 알림 목록 새로고침
+    if (state == AppLifecycleState.resumed) {
+      _loadNotifications();
+    }
+  }
+
   Future<void> _loadNotifications() async {
-    final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getStringList('notifications') ?? [];
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
-    // 저장된 문자열 리스트를 NotificationItem으로 복원
-    List<NotificationItem> loaded = saved
-        .map((e) => NotificationItem.fromJson(jsonDecode(e)))
-        .toList();
+    try {
+      final response = await _notificationService.getNotifications();
+      
+      // API 응답을 NotificationItem으로 변환
+      final loaded = response.map((json) => NotificationItem.fromJson(json)).toList();
+      
+      // 날짜순으로 정렬 (최신순)
+      loaded.sort((a, b) => b.date.compareTo(a.date));
 
-    // 3일 지난 알림 삭제
-    final now = DateTime.now();
-    loaded = loaded.where((n) {
-      final date = DateTime.parse(n.date);
-      return now.difference(date).inDays <= 3;
-    }).toList();
-
-    // 최신 상태 저장
-    await prefs.setStringList(
-        'notifications', loaded.map((n) => jsonEncode(n.toJson())).toList());
-
-    setState(() => notifications = loaded);
+      if (mounted) {
+        setState(() {
+          notifications = loaded;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString().replaceAll('Exception: ', '');
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   // 날짜 형식을 yyyy.MM.dd로 변환
@@ -115,6 +165,37 @@ class _NotificationScreenState extends State<NotificationScreen> {
       return;
     }
 
+    // 선택된 알림들의 ID 수집
+    final selectedIds = selectedIndices.map((index) => notifications[index].id).toList();
+    
+    // 서버에 삭제 요청
+    bool allSuccess = true;
+    for (final id in selectedIds) {
+      try {
+        await _notificationService.deleteNotification(id);
+      } catch (e) {
+        allSuccess = false;
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('일부 알림 삭제 실패: ${e.toString().replaceAll('Exception: ', '')}'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      }
+    }
+
+    if (allSuccess && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('알림이 삭제되었습니다.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+
+    // 로컬 상태 업데이트
     List<NotificationItem> updatedNotifications = [];
     for (int i = 0; i < notifications.length; i++) {
       if (!selectedIndices.contains(i)) {
@@ -122,16 +203,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
       }
     }
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('notifications',
-        updatedNotifications.map((n) => jsonEncode(n.toJson())).toList());
-
-    setState(() {
-      notifications = updatedNotifications;
-      selectedIndices.clear();
-      isAllSelected = false;
-      isDeleteMode = false;
-    });
+    if (mounted) {
+      setState(() {
+        notifications = updatedNotifications;
+        selectedIndices.clear();
+        isAllSelected = false;
+        isDeleteMode = false;
+      });
+    }
   }
 
   Widget _buildHeader() {
@@ -160,9 +239,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  const Text(
+                  Text(
                     '알림',
-                    style: TextStyle(
+                    style: GoogleFonts.k2d(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: Colors.black,
@@ -231,24 +310,64 @@ class _NotificationScreenState extends State<NotificationScreen> {
             _buildHeader(),
             Flexible(
               flex: isDeleteMode ? 8 : 1,
-              child: notifications.isEmpty
+              child: _isLoading
                   ? const Center(
-                      child: Text(
-                        '최근 3일 내 알림이 없습니다',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Color(0xFF9400FF),
-                        ),
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF27005D),
                       ),
                     )
-                  : Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: ListView.builder(
-                        padding: EdgeInsets.only(
-                          bottom: isDeleteMode ? 60 : 16,
-                        ),
-                        itemCount: notifications.length,
-                        itemBuilder: (context, index) {
+                  : _errorMessage != null
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.error_outline,
+                                size: 48,
+                                color: Colors.red[300],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                _errorMessage!,
+                                style: GoogleFonts.k2d(
+                                  fontSize: 14,
+                                  color: Colors.grey[600],
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: _loadNotifications,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF27005D),
+                                  foregroundColor: Colors.white,
+                                ),
+                                child: Text(
+                                  '다시 시도',
+                                  style: GoogleFonts.k2d(),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : notifications.isEmpty
+                          ? Center(
+                              child: Text(
+                                '알림이 없습니다',
+                                style: GoogleFonts.k2d(
+                                  fontSize: 16,
+                                  color: const Color(0xFF9400FF),
+                                ),
+                              ),
+                            )
+                          : Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              child: ListView.builder(
+                                padding: EdgeInsets.only(
+                                  bottom: isDeleteMode ? 60 : 16,
+                                ),
+                                itemCount: notifications.length,
+                                itemBuilder: (context, index) {
                           final item = notifications[index];
                           final isSelected = selectedIndices.contains(index);
 
@@ -286,15 +405,16 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                       children: [
                                         Text(
                                           item.title,
-                                          style: const TextStyle(
+                                          style: GoogleFonts.k2d(
                                             fontSize: 16,
                                             color: Colors.black,
+                                            fontWeight: FontWeight.w500,
                                           ),
                                         ),
                                         const SizedBox(height: 2),
                                         Text(
                                           _formatDate(item.date),
-                                          style: TextStyle(
+                                          style: GoogleFonts.k2d(
                                             fontSize: 14,
                                             color: Colors.deepPurple[300],
                                           ),
