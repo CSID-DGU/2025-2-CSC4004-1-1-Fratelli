@@ -8,7 +8,9 @@ import 'package:deepflect_app/pages/file/upload/file_preview_page.dart';
 import 'package:deepflect_app/services/file_service.dart';
 
 class FileUploadPage extends StatefulWidget {
-  const FileUploadPage({super.key});
+  final VoidCallback? onUploadSuccess;
+  
+  const FileUploadPage({super.key, this.onUploadSuccess});
 
   @override
   State<FileUploadPage> createState() => _FileUploadPageState();
@@ -90,6 +92,9 @@ class _FileUploadPageState extends State<FileUploadPage> {
         files[index]["progress"] = 1.0;
         files[index]["fileId"] = response['fileId'];
       });
+
+      // 업로드 성공 시 콜백 호출하여 히스토리 페이지 새로고침
+      widget.onUploadSuccess?.call();
     } catch (e) {
       if (!mounted) return;
       

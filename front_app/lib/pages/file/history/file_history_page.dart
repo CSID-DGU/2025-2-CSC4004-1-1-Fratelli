@@ -5,13 +5,15 @@ import 'package:deepflect_app/services/file_service.dart';
 import 'package:deepflect_app/pages/file/upload/file_preview_page.dart';
 
 class FileHistoryPage extends StatefulWidget {
-  const FileHistoryPage({super.key});
+  final GlobalKey<FileHistoryPageState>? stateKey;
+  
+  const FileHistoryPage({super.key, this.stateKey});
 
   @override
-  State<FileHistoryPage> createState() => _FileHistoryPageState();
+  State<FileHistoryPage> createState() => FileHistoryPageState();
 }
 
-class _FileHistoryPageState extends State<FileHistoryPage> {
+class FileHistoryPageState extends State<FileHistoryPage> {
   final FileService _fileService = FileService();
   int selectedTab = 0;
   final List<String> tabs = ['ALL', '사진', '동영상'];
@@ -22,6 +24,11 @@ class _FileHistoryPageState extends State<FileHistoryPage> {
   @override
   void initState() {
     super.initState();
+    _loadFiles();
+  }
+
+  // 외부에서 호출 가능한 새로고침 메서드
+  void refresh() {
     _loadFiles();
   }
 
