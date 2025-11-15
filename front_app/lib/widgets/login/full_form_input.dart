@@ -85,7 +85,11 @@ class FullFormInput extends StatelessWidget {
                                 vertical: 20,
                               ),
                               prefixIcon: prefixIcon,
-                              errorStyle: const TextStyle(fontSize: 0, height: 0),
+                              errorStyle: TextStyle(
+                                fontSize: 12,
+                                color: Colors.red[700],
+                                height: 1.2,
+                              ),
                             ),
                             style: GoogleFonts.k2d(
                               fontSize: 15,
