@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:deepflect_app/widgets/login/full_form_input.dart';
 import 'package:deepflect_app/widgets/login/login_button.dart';
 import 'package:deepflect_app/models/auth/auth_provider.dart';
+import 'package:deepflect_app/pages/login/login.dart';
 
 class SignUpPage extends ConsumerStatefulWidget {
   const SignUpPage({super.key});
@@ -18,6 +19,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
   final _confirmPasswordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   String? _errorMessage;
+  bool _hasNavigated = false; // 네비게이션 중복 방지
 
   @override
   void dispose() {
@@ -28,8 +30,30 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
   }
 
   Future<void> _handleSignUp() async {
+    print('회원가입 버튼 클릭됨');
+    
     // 폼 유효성 검사
     if (!_formKey.currentState!.validate()) {
+      print('폼 유효성 검사 실패');
+      // 각 필드를 수동으로 검증하여 에러 메시지 표시
+      final emailError = _validateEmail(_emailController.text);
+      final passwordError = _validatePassword(_passwordController.text);
+      final confirmPasswordError = _validateConfirmPassword(_confirmPasswordController.text);
+      
+      String? firstError;
+      if (emailError != null) {
+        firstError = emailError;
+      } else if (passwordError != null) {
+        firstError = passwordError;
+      } else if (confirmPasswordError != null) {
+        firstError = confirmPasswordError;
+      }
+      
+      if (firstError != null && mounted) {
+        setState(() {
+          _errorMessage = firstError;
+        });
+      }
       return;
     }
 
@@ -46,17 +70,38 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     });
 
     try {
+      print('회원가입 API 호출 시작');
       await ref.read(authNotifierProvider.notifier).register(
             _emailController.text.trim(),
             _passwordController.text,
           );
-
-      // 회원가입 성공 시
-      if (mounted) {
-        // 로그인 상태로 변경되었으므로 홈으로 이동하거나 로그인 페이지로 이동
-        Navigator.of(context).popUntil((route) => route.isFirst);
+      
+      print('회원가입 성공');
+      
+      // 회원가입 성공 시 로그인 페이지로 이동
+      if (mounted && !_hasNavigated) {
+        _hasNavigated = true;
+        print('로그인 페이지로 이동');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('회원가입 성공! 로그인해주세요.'),
+            backgroundColor: Color.fromARGB(255, 57, 132, 58),
+          ),
+        );
+        
+        // 인증 상태 초기화 (회원가입만 하고 로그인은 따로 하도록)
+        await ref.read(authNotifierProvider.notifier).logout();
+        
+        // 로그인 페이지로 이동
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (context) => const LoginMain(),
+          ),
+          (route) => false, // 모든 이전 라우트 제거
+        );
       }
     } catch (e) {
+      print('회원가입 실패: $e');
       if (mounted) {
         setState(() {
           _errorMessage = e.toString().replaceAll('Exception: ', '');
@@ -97,9 +142,22 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isLoading = ref.watch(authNotifierProvider).isLoading;
+    final authState = ref.watch(authNotifierProvider);
+    final isLoading = authState.isLoading;
     final screenHeight = MediaQuery.of(context).size.height;
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+
+    // 에러 처리
+    if (authState.error != null && _errorMessage != authState.error) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _errorMessage = authState.error!;
+          });
+          ref.read(authNotifierProvider.notifier).clearError();
+        }
+      });
+    }
 
     return Scaffold(
       resizeToAvoidBottomInset: true,

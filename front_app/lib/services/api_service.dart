@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/foundation.dart';
 import 'package:deepflect_app/services/token_storage.dart';
 
 class ApiService {
@@ -7,24 +8,60 @@ class ApiService {
   
   ApiService() {
     // dotenv가 초기화되지 않았을 때를 대비한 안전한 처리
-    String baseUrl = 'http://localhost:3000';
+    // Android 에뮬레이터에서는 localhost 대신 10.0.2.2 사용
+    String baseUrl = kDebugMode 
+        ? (defaultTargetPlatform == TargetPlatform.android 
+            ? 'http://10.0.2.2:8080'  // Android 에뮬레이터용
+            : 'http://localhost:8080')  // iOS/웹/데스크톱용
+        : 'http://localhost:8080';
+    
     try {
       final apiHost = dotenv.env['API_HOST'];
       if (apiHost != null && apiHost.isNotEmpty) {
         baseUrl = apiHost;
+        print('환경 변수에서 API 호스트 로드: $baseUrl');
+      } else {
+        print('기본 API 호스트 사용: $baseUrl');
       }
     } catch (e) {
       // dotenv가 초기화되지 않았거나 접근할 수 없는 경우 기본값 사용
-      print('dotenv 접근 실패, 기본 URL 사용: $e');
+      print('dotenv 접근 실패, 기본 URL 사용: $baseUrl ($e)');
     }
     
     _dio = Dio(BaseOptions(
       baseUrl: baseUrl,
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
       },
       validateStatus: (status) {
         return status != null && status < 500; // 5xx 에러만 자동으로 throw
+      },
+    ));
+    
+    // 요청/응답 인터셉터 추가 (디버깅용)
+    _dio.interceptors.add(InterceptorsWrapper(
+      onRequest: (options, handler) {
+        print('=== 요청 인터셉터 ===');
+        print('URL: ${options.uri}');
+        print('Method: ${options.method}');
+        print('Headers: ${options.headers}');
+        print('Data: ${options.data}');
+        return handler.next(options);
+      },
+      onResponse: (response, handler) {
+        print('=== 응답 인터셉터 ===');
+        print('Status: ${response.statusCode}');
+        print('Headers: ${response.headers}');
+        print('Data: ${response.data}');
+        return handler.next(response);
+      },
+      onError: (error, handler) {
+        print('=== 에러 인터셉터 ===');
+        print('Error: ${error.message}');
+        print('Response: ${error.response?.data}');
+        print('Status: ${error.response?.statusCode}');
+        return handler.next(error);
       },
     ));
   }
@@ -206,9 +243,18 @@ class ApiService {
 
   Future<Response> post(String endpoint, {dynamic data}) async {
     try {
+      print('POST 요청: ${_dio.options.baseUrl}$endpoint');
+      print('요청 데이터: $data');
       final response = await _dio.post(endpoint, data: data);
+      print('응답 상태: ${response.statusCode}');
+      print('응답 헤더: ${response.headers}');
       return response;
     } on DioException catch (e) {
+      print('POST 요청 실패: ${_dio.options.baseUrl}$endpoint');
+      print('에러 타입: ${e.type}');
+      print('에러 메시지: ${e.message}');
+      print('응답 데이터: ${e.response?.data}');
+      print('응답 상태 코드: ${e.response?.statusCode}');
       throw Exception('네트워크 오류가 발생했습니다: ${e.message}');
     }
   }

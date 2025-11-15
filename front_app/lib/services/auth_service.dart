@@ -65,6 +65,8 @@ class AuthService {
   Future<LoginResponse> register(String email, String password) async {
     try {
       print('회원가입 시도: $email');
+      print('회원가입 엔드포인트: /api/v1/auth/register');
+      print('요청 데이터: {email: $email, password: [비밀번호 숨김]}');
       
       final response = await _apiService.post(
         '/api/v1/auth/register',
@@ -79,13 +81,54 @@ class AuthService {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final responseData = response.data;
+        print('응답 데이터 타입: ${responseData.runtimeType}');
+        print('응답 데이터 전체: $responseData');
+        
         if (responseData['success'] == true && responseData['data'] != null) {
-          return LoginResponse.fromJson(responseData['data']);
+          final data = responseData['data'];
+          print('data 필드 타입: ${data.runtimeType}');
+          print('data 필드 내용: $data');
+          
+          // data가 Map인지 확인
+          if (data is! Map<String, dynamic>) {
+            print('에러: data가 Map이 아닙니다. 타입: ${data.runtimeType}');
+            throw Exception('서버 응답 형식이 올바르지 않습니다. data 필드가 Map이 아닙니다.');
+          }
+          
+          return LoginResponse.fromJson(data);
         } else {
-          throw Exception('서버 응답 형식이 올바르지 않습니다.');
+          print('응답 형식 오류 - success: ${responseData['success']}, data: ${responseData['data']}');
+          final errorMessage = responseData['message'] ?? responseData['error'] ?? '알 수 없는 오류';
+          throw Exception('서버 응답 형식이 올바르지 않습니다. $errorMessage');
         }
       } else {
-        throw Exception('회원가입 실패: ${response.statusMessage}');
+        final responseData = response.data;
+        String errorMessage;
+        
+        if (responseData is Map) {
+          errorMessage = responseData['message'] ?? 
+                        responseData['error'] ?? 
+                        responseData['msg'] ??
+                        response.statusMessage ?? 
+                        '알 수 없는 오류';
+        } else if (responseData is String && responseData.isNotEmpty) {
+          errorMessage = responseData;
+        } else {
+          errorMessage = response.statusMessage ?? '알 수 없는 오류';
+        }
+        
+        print('회원가입 실패 - 상태 코드: ${response.statusCode}, 메시지: $errorMessage, 응답: $responseData');
+        
+        // 상태 코드별 에러 메시지
+        if (response.statusCode == 400) {
+          throw Exception('입력 정보를 확인해주세요. $errorMessage');
+        } else if (response.statusCode == 403) {
+          throw Exception('접근 권한이 없습니다. $errorMessage');
+        } else if (response.statusCode == 409) {
+          throw Exception('이미 존재하는 이메일입니다.');
+        } else {
+          throw Exception('회원가입 실패 (${response.statusCode}): $errorMessage');
+        }
       }
     } on DioException catch (e) {
       print('DioException 발생: ${e.type}');
@@ -94,7 +137,17 @@ class AuthService {
       print('상태 코드: ${e.response?.statusCode}');
       
       if (e.response?.statusCode == 400) {
-        throw Exception('입력 정보를 확인해주세요.');
+        final responseData = e.response?.data;
+        final errorMsg = responseData is Map 
+            ? (responseData['message'] ?? responseData['error'] ?? '입력 정보를 확인해주세요.')
+            : '입력 정보를 확인해주세요.';
+        throw Exception(errorMsg);
+      } else if (e.response?.statusCode == 403) {
+        final responseData = e.response?.data;
+        final errorMsg = responseData is Map 
+            ? (responseData['message'] ?? responseData['error'] ?? '접근 권한이 없습니다.')
+            : '접근 권한이 없습니다.';
+        throw Exception(errorMsg);
       } else if (e.response?.statusCode == 409) {
         throw Exception('이미 존재하는 이메일입니다.');
       } else if (e.type == DioExceptionType.connectionTimeout) {
