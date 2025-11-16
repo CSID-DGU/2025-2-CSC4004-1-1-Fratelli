@@ -1,7 +1,6 @@
 package com.example.deepflect.Jwt;
 
 import com.example.deepflect.DTO.LoginResponse;
-import com.example.deepflect.Entity.Users;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
@@ -19,8 +18,6 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.Date;
-
-import static javax.crypto.Cipher.SECRET_KEY;
 
 @Slf4j
 @Component

@@ -18,7 +18,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-
 import java.util.List;
 import java.util.Optional;
 
@@ -38,9 +37,6 @@ public class AuthService {
 
     @Autowired
     PasswordEncoder passwordEncoder;
-
-    @Autowired
-    UserDAO userDAO;
 
     @Autowired
     JwtTokenProvider jwtTokenProvider;
@@ -76,10 +72,11 @@ public class AuthService {
 //        return jwtTokenProvider.createTokenResponse(authentication);
 //    }
 
+    // 토큰 저장 및 유저 상태 업데이트
     private void saveTokenForUser(Users user, LoginResponse tokens) {
         // 기존 토큰이 있으면 삭제
         if (user.getUserTokens() != null) {
-            userTokenRepository.delete(user.getUserTokens());
+            queryService.deleteToken(user.getUserTokens().getTokenId());
         }
 
         // 새 토큰 엔티티 생성
@@ -88,23 +85,24 @@ public class AuthService {
         userTokens.setAccessToken(tokens.getAccessToken());
         userTokens.setRefreshToken(tokens.getRefreshToken());
 
-        // 유저 상태 업데이트 (선택)
-        user.setStatus(UserStatus.ACTIVE);
+        // 유저 상태 업데이트 및 DB 반영
+        usersRepository.save(user);  // 반드시 저장해야 DB에 반영됨
 
-        // 저장
+        // 토큰 저장
         userTokenRepository.save(userTokens);
 
         log.info("AccessToken/RefreshToken stored for {}", user.getEmail());
     }
 
-    // 로그인 시 토큰 저장
+    // 로그인 시 토큰 발급 및 저장
     public LoginResponse login(LoginRequest loginRequest) {
         log.info("Login attempt for email={}", loginRequest.getEmail());
 
-        // (선택) DB에 존재 여부 빠르게 검사 — 자세한 비밀번호 비교는 authenticationManager 에 맡김
+        // 유저 조회
         Users user = usersRepository.findByEmail(loginRequest.getEmail())
                 .orElseThrow(() -> new RuntimeException("존재하지 않는 이메일입니다."));
 
+        // 인증 시도
         Authentication authentication;
         try {
             authentication = authenticationManager.authenticate(
@@ -114,20 +112,58 @@ public class AuthService {
                     )
             );
         } catch (Exception e) {
-            // Exception 내부에서 StackOverflow가 발생하면 이 라인까지 도달 못함(그럼 바로 JVM 오류)
             log.error("Authenticate exception for {}: {}", loginRequest.getEmail(), e.toString(), e);
             throw e;
         }
 
-        // authentication이 성공하면 jwt 발급
+        // JWT 토큰 생성
         LoginResponse tokens = jwtTokenProvider.createTokenResponse(authentication);
 
-        // 토큰 저장 로직은 별도 메서드로 분리해도 좋음
+        // DB에 토큰 저장 + 유저 상태 ACTIVE 반영
         saveTokenForUser(user, tokens);
 
         return tokens;
     }
 
+    public LoginResponse reissue(String refreshToken) {
+
+        // 1. RefreshToken 유효성 검사 (서명/만료)
+        if (!jwtTokenProvider.validateToken(refreshToken)) {
+            throw new RuntimeException("Refresh Token is invalid or expired");
+        }
+
+        // 2. Refresh Token에서 사용자 이메일 가져오기
+        String userEmail = jwtTokenProvider.extractEmail(refreshToken);
+
+        // 3. DB에서 저장된 Refresh Token 불러오기
+        Users user = usersRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        UserTokens userTokens = user.getUserTokens();
+
+        if (userTokens == null) {
+            throw new RuntimeException("User has no refresh token in DB");
+        }
+
+        // 4. DB의 RefreshToken과 일치하는지 확인
+        if (!userTokens.getRefreshToken().equals(refreshToken)) {
+            throw new RuntimeException("Refresh token does not match stored token");
+        }
+
+        // 5. 새 토큰 발급
+        Authentication authentication =
+                new UsernamePasswordAuthenticationToken(userEmail, null, List.of());
+
+        LoginResponse newTokens = jwtTokenProvider.createTokenResponse(authentication);
+
+        // 6. DB에 새 Refresh Token 업데이트
+        userTokens.setRefreshToken(newTokens.getRefreshToken());
+        userTokens.setAccessToken(newTokens.getAccessToken());
+
+        userTokenRepository.save(userTokens);
+
+        return newTokens;
+    }
 
     public boolean deleteToken(String accessToken) {
 //        Optional<UserTokens> userToken = userTokenRepository.findByAccessToken(token);
@@ -144,7 +180,6 @@ public class AuthService {
 
             Long tokenId = userToken.getTokenId();
             // 사용자 상태 변경 (선택)
-            user.setStatus(UserStatus.INACTIVE);
 
             // 토큰 삭제
             queryService.deleteToken(tokenId);
@@ -167,6 +202,24 @@ public class AuthService {
         }
     }
 
+    public Users getNewUserInfo(UpdateUserRequest updateUserRequest, Optional<Users> userOptional) {
+        Users user = userOptional.get();
+
+        // 원하는 필드만 업데이트
+//            if (updateUserRequest.getEmail() != null && !updateUserRequest.getEmail().isEmpty()) {
+//                Optional<Users> existingUser = usersRepository.findByEmail(updateUserRequest.getEmail());
+//                if (existingUser.isPresent() && !existingUser.get().getUserNum().equals(user.getUserNum())) {
+//                    // 다른 계정이 이미 사용 중인 이메일
+//                    return ResponseEntity.status(HttpStatus.CONFLICT)
+//                            .body(null); // 혹은 에러 메시지 DTO 반환
+//                }
+//                user.setEmail(updateUserRequest.getEmail());
+//            }
+        if (updateUserRequest.getPassword() != null) user.setPassword(updateUserRequest.getPassword());
+        // 다른 업데이트 필드 필요 시 추가
+        if (updateUserRequest.getUserName() != null) user.setUserName(updateUserRequest.getUserName());
+        return user;
+    }
 //    public boolean deleteToken(String email) {
 //        Optional<UserToken> userToken = userTokenRepository.findByEmail(email);
 ////        System.out.println(userToken);

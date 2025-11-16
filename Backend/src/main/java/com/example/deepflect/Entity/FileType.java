@@ -1,6 +1,6 @@
 package com.example.deepflect.Entity;
 
-public enum MediaType {
+public enum FileType {
     IMAGE,
     VIDEO
 

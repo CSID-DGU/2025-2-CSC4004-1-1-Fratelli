@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -28,27 +30,29 @@ public class Users{
     @Column(name = "user_name", length = 100)
     private String userName;
 
-    @Enumerated(EnumType.STRING)
-    private UserStatus status;
+//    @Enumerated(EnumType.STRING)
+//    private UserStatus status;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    @PrePersist
-    public void prePersist() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
-        if (this.status == null) this.status = UserStatus.ACTIVE;
-    }
+//    @PrePersist
+//    public void prePersist() {
+//        this.createdAt = LocalDateTime.now();
+//        this.updatedAt = LocalDateTime.now();
+//        if (this.status == null) this.status = UserStatus.ACTIVE;
+//    }
 
-    @PreUpdate
-    public void preUpdate() {
-        this.updatedAt = LocalDateTime.now();
-    }
+//    @PreUpdate
+//    public void preUpdate() {
+//        this.updatedAt = LocalDateTime.now();
+//    }
 
     // 양방향 매핑
     @JsonIgnore
     @OneToOne(mappedBy = "user", cascade = CascadeType.PERSIST, orphanRemoval = true, fetch = FetchType.LAZY)
     private UserTokens userTokens;
 
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private List<Files> filesList = new ArrayList<>();
 }
