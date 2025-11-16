@@ -6,13 +6,12 @@ import com.example.deepflect.Repository.UsersRepository;
 import com.example.deepflect.Service.AuthService;
 import com.example.deepflect.Service.QueryService;
 import com.example.deepflect.Service.UsersService;
-import jakarta.validation.Valid;
-import org.hibernate.sql.Update;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
@@ -46,6 +45,34 @@ public class AuthController {
         authService.cleanExpiredTokens();
         LoginResponse loginResponse = authService.login(loginRequest);
         return ResponseEntity.ok(loginResponse);
+    }
+
+    @GetMapping("/check-login")
+    public ResponseEntity<String> checkLogin() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+        if (auth != null && auth.isAuthenticated() &&
+                !(auth.getPrincipal() instanceof String && auth.getPrincipal().equals("anonymousUser"))) {
+
+            UserDetails userDetails = (UserDetails) auth.getPrincipal();
+            return ResponseEntity.ok("로그인됨: " + userDetails.getUsername());
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인 필요");
+        }
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refresh(@RequestHeader("Authorization") String refreshToken) {
+
+        if (refreshToken == null || !refreshToken.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Refresh token required");
+        }
+
+        String token = refreshToken.substring(7);
+
+        LoginResponse newTokens = authService.reissue(token);
+
+        return ResponseEntity.ok(newTokens);
     }
 
     @PostMapping("/logout")
@@ -88,7 +115,7 @@ public class AuthController {
         Optional<Users> userOptional = usersRepository.findByEmail(email);
 
         if (userOptional.isPresent()) {
-            Users user = getNewUserInfo(updateUserRequest, userOptional);
+            Users user = authService.getNewUserInfo(updateUserRequest, userOptional);
             System.out.println("-------------------------" + user.toString());
             queryService.saveModifyUserInfo(user.getUserNum(), user.getUserName(), user.getPassword());
 //            usersRepository.save(user); // DB 반영
@@ -98,24 +125,7 @@ public class AuthController {
         }
     }
 
-    private static Users getNewUserInfo(UpdateUserRequest updateUserRequest, Optional<Users> userOptional) {
-        Users user = userOptional.get();
 
-        // 원하는 필드만 업데이트
-//            if (updateUserRequest.getEmail() != null && !updateUserRequest.getEmail().isEmpty()) {
-//                Optional<Users> existingUser = usersRepository.findByEmail(updateUserRequest.getEmail());
-//                if (existingUser.isPresent() && !existingUser.get().getUserNum().equals(user.getUserNum())) {
-//                    // 다른 계정이 이미 사용 중인 이메일
-//                    return ResponseEntity.status(HttpStatus.CONFLICT)
-//                            .body(null); // 혹은 에러 메시지 DTO 반환
-//                }
-//                user.setEmail(updateUserRequest.getEmail());
-//            }
-        if (updateUserRequest.getPassword() != null) user.setPassword(updateUserRequest.getPassword());
-        // 다른 업데이트 필드 필요 시 추가
-        if (updateUserRequest.getUserName() != null) user.setUserName(updateUserRequest.getUserName());
-        return user;
-    }
 
 
     @DeleteMapping("/delete/{userNum}")

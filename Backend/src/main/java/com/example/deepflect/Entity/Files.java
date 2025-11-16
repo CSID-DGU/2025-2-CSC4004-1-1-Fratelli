@@ -1,27 +1,33 @@
 package com.example.deepflect.Entity;
 
 import jakarta.persistence.*;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "Files")
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
 public class Files {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long fileId;
 
-    private Long userId;
+    private String taskId;
+    private String originalFileName;
+    private String savedFileName;
+    private String savedPath;
+    private Long size; // 파일 크기
 
-    @Enumerated(EnumType.STRING)
-    private MediaType mediaType;  // IMAGE or VIDEO
+    private LocalDateTime createdAt;
 
-    private String fileName;
-    private String fileUrl;
-    private String thumbnailUrl;
-    private Long fileSize;
-    private String mimeType;
-    private LocalDateTime uploadDate;
-    private String description;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_num")
+    private Users user;
+
 }

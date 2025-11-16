@@ -15,15 +15,13 @@ public class UserDTO {
     private String email;
     private String password;
     private String userName;
-    private UserStatus status;
 
 
     public static UserDTO fromEntity(Users users){
         return new UserDTO(
                 users.getPassword(),
                 users.getEmail(),
-                users.getUserName(),
-                users.getStatus());
+                users.getUserName());
     }
 
     public static Users fromDto(UserDTO dto){
@@ -31,7 +29,6 @@ public class UserDTO {
         users.setEmail(dto.getEmail());
         users.setPassword(dto.getPassword());
         users.setUserName(dto.getUserName());
-        users.setStatus(dto.getStatus());
         return users;
     }
 
