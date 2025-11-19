@@ -36,7 +36,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws ServletException, IOException {
 
-        System.out.println("JWT 필터 동작 시작: " + request.getRequestURI());
+        String requestUri = request.getRequestURI();
+        
+        // 콜백 엔드포인트 및 공개 다운로드 엔드포인트는 JWT 검증 스킵
+        if (requestUri.startsWith("/api/v1/callback/") || requestUri.startsWith("/api/v1/files/download-protected/")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        System.out.println("JWT 필터 동작 시작: " + requestUri);
         System.out.println("Authorization 헤더: " + request.getHeader("Authorization"));
         String header = request.getHeader("Authorization");
         System.out.println(header);

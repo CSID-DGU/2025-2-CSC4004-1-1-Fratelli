@@ -10,6 +10,10 @@ spring:
     hibernate:
       ddl-auto: none
     show-sql: true
+  servlet:
+    multipart:
+      max-file-size: 2000MB
+      max-request-size: 2000MB
 
 jwt:
   secret-key: testtesttesttesttesttesttesttesttesttesttesttesttesttest
@@ -21,4 +25,4 @@ file:
 
 ai:
   server:
-    url: http://localhost:5000
+    url: http://localhost:8000
