@@ -1,12 +1,13 @@
 package com.example.deepflect.DTO;
 
 import com.example.deepflect.Entity.FileType;
+import com.example.deepflect.Entity.Status;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
+import java.sql.Timestamp;
 
 @Getter
 @Setter
@@ -14,9 +15,11 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class FileUploadResponse {
 
-    private Long fileId;
+    private String taskId;
     private String fileName;
-    private FileType fileType;
-    private LocalDateTime uploadAt;
+    private long size; // bytes
+    private FileType fileType; // "video", "image", "audio"
+    private Status status; // UPLOADING, FAILED, SUCCESS
+    private Timestamp timestamp; // ISO8601 timestamp string
 
 }
