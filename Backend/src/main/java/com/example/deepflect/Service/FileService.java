@@ -64,7 +64,7 @@ public class FileService {
 
         filesRepository.save(files);
 
-        sendToPythonServer(saveFile.getAbsolutePath());
+        // sendToPythonServer(saveFile.getAbsolutePath()); // 중복 호출 제거 - AiService에서 처리함
 
         return saveFile.getAbsolutePath();
     }
@@ -74,6 +74,17 @@ public class FileService {
 
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
         body.add("file", new FileSystemResource(filePath));
+        // Determine basic fileType by extension
+        String fileType = "other";
+        String lower = filePath.toLowerCase();
+        if (lower.endsWith(".mp4") || lower.endsWith(".mov") || lower.endsWith(".mkv") || lower.endsWith(".avi")) {
+            fileType = "video";
+        } else if (lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png") || lower.endsWith(".bmp") || lower.endsWith(".gif")) {
+            fileType = "image";
+        } else if (lower.endsWith(".wav") || lower.endsWith(".mp3") || lower.endsWith(".flac")) {
+            fileType = "audio";
+        }
+        body.add("fileType", fileType);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
@@ -81,7 +92,8 @@ public class FileService {
         HttpEntity<MultiValueMap<String, Object>> requestEntity =
                 new HttpEntity<>(body, headers);
 
-        String pythonServerUrl = "http://localhost:5000/progress";
+        // Use the unified processing endpoint which handles image/video logic
+        String pythonServerUrl = "http://localhost:5000/api/v1/process-file";
 
         try {
             ResponseEntity<String> response =
