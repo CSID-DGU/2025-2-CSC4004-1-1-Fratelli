@@ -16,7 +16,7 @@ class MyPage extends ConsumerWidget {
   void _showLogoutDialog(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.5), // 어두운 배경
+      barrierColor: Colors.black.withOpacity(0.5),
       builder: (BuildContext context) {
         return AlertDialog(
           backgroundColor: Colors.white,
@@ -117,7 +117,6 @@ class MyPage extends ConsumerWidget {
       body: SafeArea(
         child: Column(
           children: [
-            // 헤더 섹션 (다크 퍼플)
             Container(
               height: 210,
               width: double.infinity,
@@ -132,7 +131,6 @@ class MyPage extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 마이페이지 제목
                   Text(
                     '마이페이지',
                     style: GoogleFonts.k2d(
@@ -174,7 +172,6 @@ class MyPage extends ConsumerWidget {
                 ],
               ),
             ),
-            // UploadStatistics 위젯 (헤더와 메인 콘텐츠 사이에 위치)
             Transform.translate(
               offset: const Offset(0, -50),
               child: const UploadStatistics(
@@ -182,7 +179,6 @@ class MyPage extends ConsumerWidget {
                 videoCount: 1,
               ),
             ),
-            // 메인 콘텐츠 영역
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(27, 0, 27, 20),
@@ -190,7 +186,7 @@ class MyPage extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 20),
-                    // 알림 섹션
+                    // 알림
                     Text(
                       '알림',
                       style: GoogleFonts.k2d(
@@ -200,7 +196,6 @@ class MyPage extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    // 알림 메뉴 아이템
                     MenuItem(
                       icon: Icons.notifications_outlined,
                       title: '알림',
@@ -220,13 +215,12 @@ class MyPage extends ConsumerWidget {
                       onTap: () {},
                     ),
                     const SizedBox(height: 24),
-                    // 구분선
                     const Divider(
                       color: Color(0xFFE5E0F2),
                       thickness: 1,
                     ),
                     const SizedBox(height: 24),
-                    // 계정 섹션
+                    // 계정
                     Text(
                       '계정',
                       style: GoogleFonts.k2d(
@@ -236,7 +230,7 @@ class MyPage extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    // 회원정보 수정 메뉴 아이템
+                    // 회원정보 수정
                     MenuItemWithSubtitle(
                       icon: Icons.info_outline,
                       title: '회원정보 수정',
@@ -251,7 +245,7 @@ class MyPage extends ConsumerWidget {
                       },
                     ),
                     const SizedBox(height: 12),
-                    // 로그아웃 메뉴 아이템
+                    // 로그아웃
                     MenuItem(
                       icon: Icons.logout,
                       title: '로그아웃',

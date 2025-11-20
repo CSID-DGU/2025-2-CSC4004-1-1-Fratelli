@@ -3,35 +3,38 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:deepflect_app/services/notification_service.dart';
 
 class NotificationItem {
-  final String id;
-  final String title;
-  final String date; // yyyy-MM-dd 형식 저장
+  final String taskId;
+  final String status;
+  final String fileName;
+  final String fileType;
+  final String message;
+  final String timestamp;  // ISO8601 문자열
 
   NotificationItem({
-    required this.id,
-    required this.title,
-    required this.date,
+    required this.taskId,
+    required this.status,
+    required this.fileName,
+    required this.fileType,
+    required this.message,
+    required this.timestamp,
   });
 
   factory NotificationItem.fromJson(Map<String, dynamic> json) {
-    // API 응답 형식에 맞게 조정
-    final id = json['id']?.toString() ?? json['notificationId']?.toString() ?? '';
-    final title = json['title']?.toString() ?? json['message']?.toString() ?? '';
-    final dateStr = json['createdAt']?.toString() ?? json['date']?.toString() ?? DateTime.now().toIso8601String();
-    
-    // 날짜 형식 변환 (ISO8601 또는 yyyy-MM-dd)
-    String formattedDate = dateStr;
-    try {
-      final date = DateTime.parse(dateStr);
-      formattedDate = date.toIso8601String().split('T')[0]; // yyyy-MM-dd 형식으로 변환
-    } catch (e) {
-      formattedDate = DateTime.now().toIso8601String().split('T')[0];
-    }
-    
+    final taskId = json['taskId']?.toString() ?? '';
+    final status = json['status']?.toString() ?? '';
+    final fileName = json['fileName']?.toString() ?? '';
+    final fileType = json['fileType']?.toString() ?? '';
+    final message = json['message']?.toString() ?? '';
+    final timestamp =
+        json['timestamp']?.toString() ?? DateTime.now().toIso8601String();
+
     return NotificationItem(
-      id: id,
-      title: title,
-      date: formattedDate,
+      taskId: taskId,
+      status: status,
+      fileName: fileName,
+      fileType: fileType,
+      message: message,
+      timestamp: timestamp,
     );
   }
 }
@@ -46,8 +49,8 @@ class NotificationScreen extends StatefulWidget {
 class _NotificationScreenState extends State<NotificationScreen> with WidgetsBindingObserver {
   final NotificationService _notificationService = NotificationService();
   List<NotificationItem> notifications = [];
-  bool isDeleteMode = false; // 삭제 모드 여부
-  Set<int> selectedIndices = {}; // 선택된 항목의 인덱스 집합
+  bool isDeleteMode = false;
+  Set<int> selectedIndices = {};
   bool isAllSelected = false;
   bool _isLoading = true;
   String? _errorMessage;
@@ -68,7 +71,6 @@ class _NotificationScreenState extends State<NotificationScreen> with WidgetsBin
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    // 앱이 포그라운드로 돌아올 때 알림 목록 새로고침
     if (state == AppLifecycleState.resumed) {
       _loadNotifications();
     }
@@ -86,8 +88,7 @@ class _NotificationScreenState extends State<NotificationScreen> with WidgetsBin
       // API 응답을 NotificationItem으로 변환
       final loaded = response.map((json) => NotificationItem.fromJson(json)).toList();
       
-      // 날짜순으로 정렬 (최신순)
-      loaded.sort((a, b) => b.date.compareTo(a.date));
+      loaded.sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
       if (mounted) {
         setState(() {
@@ -105,13 +106,18 @@ class _NotificationScreenState extends State<NotificationScreen> with WidgetsBin
     }
   }
 
-  // 날짜 형식을 yyyy.MM.dd로 변환
+  // 날짜 형식 변환
   String _formatDate(String dateStr) {
     final date = DateTime.parse(dateStr);
-    return '${date.year}.${date.month.toString().padLeft(2, '0')}.${date.day.toString().padLeft(2, '0')}';
+    final y = date.year;
+    final m = date.month.toString().padLeft(2, '0');
+    final d = date.day.toString().padLeft(2, '0');
+    final hh = date.hour.toString().padLeft(2, '0');
+    final mm = date.minute.toString().padLeft(2, '0');
+    return '$y.$m.$d $hh:$mm';
   }
 
-  // 삭제 모드 진입
+  // 삭제 모드
   void _enterDeleteMode() {
     setState(() {
       isDeleteMode = true;
@@ -120,7 +126,6 @@ class _NotificationScreenState extends State<NotificationScreen> with WidgetsBin
     });
   }
 
-  // 삭제 모드 종료
   void _exitDeleteMode() {
     setState(() {
       isDeleteMode = false;
@@ -129,7 +134,7 @@ class _NotificationScreenState extends State<NotificationScreen> with WidgetsBin
     });
   }
 
-  // 전체 선택/해제 토글
+  // 전체 항목
   void _toggleSelectAll() {
     setState(() {
       if (isAllSelected) {
@@ -143,7 +148,7 @@ class _NotificationScreenState extends State<NotificationScreen> with WidgetsBin
     });
   }
 
-  // 개별 항목 선택/해제 토글
+  // 개별 항목
   void _toggleItemSelection(int index) {
     setState(() {
       if (selectedIndices.contains(index)) {
@@ -151,7 +156,6 @@ class _NotificationScreenState extends State<NotificationScreen> with WidgetsBin
         isAllSelected = false;
       } else {
         selectedIndices.add(index);
-        // 모든 항목이 선택되었는지 확인
         if (selectedIndices.length == notifications.length) {
           isAllSelected = true;
         }
@@ -159,14 +163,14 @@ class _NotificationScreenState extends State<NotificationScreen> with WidgetsBin
     });
   }
 
-  // 선택된 항목 삭제
+  // 삭제
   Future<void> _deleteSelected() async {
     if (selectedIndices.isEmpty) {
       return;
     }
 
-    // 선택된 알림들의 ID 수집
-    final selectedIds = selectedIndices.map((index) => notifications[index].id).toList();
+    final selectedIds =
+        selectedIndices.map((index) => notifications[index].taskId).toList();
     
     // 서버에 삭제 요청
     bool allSuccess = true;
@@ -404,7 +408,11 @@ class _NotificationScreenState extends State<NotificationScreen> with WidgetsBin
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          item.title,
+                                          item.fileName.isNotEmpty
+                                              ? item.fileName
+                                              : (item.message.length > 30
+                                                  ? '${item.message.substring(0, 30)}...'
+                                                  : item.message),
                                           style: GoogleFonts.k2d(
                                             fontSize: 16,
                                             color: Colors.black,
@@ -413,7 +421,7 @@ class _NotificationScreenState extends State<NotificationScreen> with WidgetsBin
                                         ),
                                         const SizedBox(height: 2),
                                         Text(
-                                          _formatDate(item.date),
+                                          _formatDate(item.timestamp),
                                           style: GoogleFonts.k2d(
                                             fontSize: 14,
                                             color: Colors.deepPurple[300],

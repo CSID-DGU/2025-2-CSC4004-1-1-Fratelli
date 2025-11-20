@@ -96,7 +96,6 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.start,
           children: <Widget>[
-            // 뒤로가기 버튼 (상단 고정)
             Padding(
               padding: const EdgeInsets.only(left: 10.0, top: 15.0),
               child: IconButton(
@@ -108,7 +107,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
               ),
             ),
             
-            // 제목 영역
+            // 제목
             Padding(
               padding: EdgeInsets.only(
                 left: 30.0,
@@ -173,7 +172,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
             
             SizedBox(height: screenHeight < 700 ? 10 : 20),
             
-            // 폼 필드 영역
+            // 폼 필드
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Column(
@@ -325,7 +324,6 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                     ],
                   ),
             ),
-            // 키보드가 올라올 때 여유 공간 확보
             SizedBox(height: MediaQuery.of(context).viewInsets.bottom > 0 ? 20 : 0),
           ],
         ),
@@ -361,8 +359,10 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     });
 
     try {
+      // 명세: UserUpdateRequest { "email", "password" }
       final updatedUser = await ref.read(authNotifierProvider.notifier).updateUser({
         'email': _emailController.text.trim(),
+        'password': _passwordForEmailController.text,
       });
 
       // UserProvider도 업데이트
@@ -422,10 +422,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     try {
       final updatedUser = await ref.read(authNotifierProvider.notifier).updateUser({
         'password': _newPasswordController.text,
-        'currentPassword': _currentPasswordController.text,
       });
 
-      // UserProvider도 업데이트
       ref.read(userNotifierProvider.notifier).updateUserInfo(updatedUser);
 
       if (mounted) {

@@ -35,7 +35,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
           MaterialPageRoute(
             builder: (context) => const LandingPage(),
           ),
-          (route) => false, // 모든 이전 라우트 제거
+          (route) => false,
         );
       }
     } catch (e) {
@@ -97,7 +97,6 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
-                // 확인 체크박스
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -169,7 +168,6 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                   ),
                 ],
                 const SizedBox(height: 40),
-                // 확인 버튼
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -194,7 +192,6 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                // 취소 버튼
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
