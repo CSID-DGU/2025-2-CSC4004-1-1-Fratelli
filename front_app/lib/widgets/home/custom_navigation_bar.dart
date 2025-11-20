@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-// 커스텀 네비게이션 바
 class CustomNavigationBar extends StatelessWidget {
   final int currentIndex;
   final Function(int) onTap;
@@ -30,7 +29,6 @@ class CustomNavigationBar extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          // 히스토리 (왼쪽)
           Expanded(
             child: _NavItem(
               label: '히스토리',
@@ -39,12 +37,10 @@ class CustomNavigationBar extends StatelessWidget {
               onTap: () => onTap(0),
             ),
           ),
-          // 홈/업로드 (중앙 - 보라색 원형 배경)
           _HomeNavItem(
             isSelected: currentIndex == 1,
             onTap: () => onTap(1),
           ),
-          // 마이페이지 (오른쪽)
           Expanded(
             child: _NavItem(
               label: '마이페이지',
@@ -59,7 +55,6 @@ class CustomNavigationBar extends StatelessWidget {
   }
 }
 
-// 개별 네비 아이템 (히스토리, 마이페이지)
 class _NavItem extends StatelessWidget {
   final String label;
   final IconData icon;
@@ -109,7 +104,6 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-// 홈 네비 아이템 (중앙 - 보라색 원형 배경, 약간 위로 올라온 형태)
 class _HomeNavItem extends StatelessWidget {
   final bool isSelected;
   final VoidCallback onTap;
@@ -125,7 +119,7 @@ class _HomeNavItem extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Transform.translate(
-        offset: const Offset(0, -16), // 위로 약간 올림
+        offset: const Offset(0, -16),
         child: Container(
           width: 56,
           height: 56,

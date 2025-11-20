@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-// 점선 구분선을 그리기 위한 CustomPainter
 class DottedLinePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
@@ -38,9 +37,8 @@ class UploadStatistics extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 화면 너비에서 양쪽 여백을 뺀 크기 계산
     final screenWidth = MediaQuery.of(context).size.width;
-    final horizontalPadding = 24.0; // 양쪽 여백
+    final horizontalPadding = 24.0; 
     final containerWidth = screenWidth - (horizontalPadding * 2);
     
     return Container(
@@ -60,7 +58,6 @@ class UploadStatistics extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // 사진 섹션
           Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -68,7 +65,7 @@ class UploadStatistics extends StatelessWidget {
                 Icon(
                   Icons.photo,
                   size: 24,
-                  color: const Color(0xFF27005D), // 어두운 보라색
+                  color: const Color(0xFF27005D),
                 ),
                 const SizedBox(height: 8),
                 const Text(
@@ -87,7 +84,7 @@ class UploadStatistics extends StatelessWidget {
                   photoCount.toString(),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    color: Color(0xFF9400FF), // 밝은 보라색
+                    color: Color(0xFF9400FF),
                     fontSize: 13,
                     fontFamily: 'K2D',
                     fontWeight: FontWeight.w500,
@@ -97,12 +94,10 @@ class UploadStatistics extends StatelessWidget {
               ],
             ),
           ),
-          // 구분선 (점선)
           CustomPaint(
             painter: DottedLinePainter(),
             size: const Size(1, 80),
           ),
-          // 동영상 섹션
           Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -110,7 +105,7 @@ class UploadStatistics extends StatelessWidget {
                 Icon(
                   Icons.video_camera_back,
                   size: 24,
-                  color: const Color(0xFF27005D), // 어두운 보라색
+                  color: const Color(0xFF27005D),
                 ),
                 const SizedBox(height: 8),
                 const Text(
@@ -129,7 +124,7 @@ class UploadStatistics extends StatelessWidget {
                   videoCount.toString(),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    color: Color(0xFF9400FF), // 밝은 보라색
+                    color: Color(0xFF9400FF),
                     fontSize: 13,
                     fontFamily: 'K2D',
                     fontWeight: FontWeight.w500,

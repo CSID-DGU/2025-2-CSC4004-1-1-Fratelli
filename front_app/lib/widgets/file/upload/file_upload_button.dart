@@ -31,9 +31,8 @@ class _FileSelectButtonState extends State<FileUploadButton> {
 
   @override
   Widget build(BuildContext context) {
-    // 화면 너비에서 양쪽 여백을 뺀 크기 계산
     final screenWidth = MediaQuery.of(context).size.width;
-    final horizontalPadding = 20.0; // 양쪽 여백
+    final horizontalPadding = 20.0; 
     final containerWidth = screenWidth - (horizontalPadding * 2);
 
     return Container(

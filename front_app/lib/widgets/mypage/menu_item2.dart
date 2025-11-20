@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-// 서브타이틀이 있는 메뉴 아이템 위젯
 class MenuItemWithSubtitle extends StatelessWidget {
   final IconData icon;
   final String title;

@@ -15,9 +15,8 @@ class LoginButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 화면 너비에서 양쪽 여백을 뺀 크기 계산
     final screenWidth = MediaQuery.of(context).size.width;
-    final horizontalPadding = 24.0; // 양쪽 여백
+    final horizontalPadding = 24.0;
     final buttonWidth = screenWidth - (horizontalPadding * 2);
     
     return Material(
