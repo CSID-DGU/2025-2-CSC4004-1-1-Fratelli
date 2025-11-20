@@ -20,11 +20,10 @@ class _HomePageState extends ConsumerState<HomePage> {
     FileHistoryPage(key: _historyPageKey, stateKey: _historyPageKey), // 히스토리 페이지 (index 0)
     FileUploadPage(
       onUploadSuccess: () {
-        // 업로드 성공 시 히스토리 페이지 새로고침
         _historyPageKey.currentState?.refresh();
       },
-    ), // 업로드 페이지 (홈) (index 1)
-    const MyPage(), // 마이페이지 (index 2)
+    ),
+    const MyPage(),
   ];
 
   void _onNavTap(int index) {
