@@ -30,7 +30,8 @@ class LoginResponse with _$LoginResponse {
   const factory LoginResponse({
     required String accessToken,
     required String refreshToken,
-    required UserInfo userInfo,
+    required String accessTokenExpiresAt,
+    required String refreshTokenExpiresAt,
   }) = _LoginResponse;
 
   factory LoginResponse.fromJson(Map<String, dynamic> json) =>

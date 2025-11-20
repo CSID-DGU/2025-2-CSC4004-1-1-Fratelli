@@ -14,12 +14,11 @@ class AuthNotifier extends _$AuthNotifier {
   @override
   AuthState build() {
     _authService = AuthService();
-    // 비동기 초기화를 안전하게 처리
     Future.microtask(() => _checkAuthStatus());
     return const AuthState();
   }
 
-  // 앱 시작 시 토큰 확인
+  // 토큰 확인
   Future<void> _checkAuthStatus() async {
     final hasTokens = await TokenStorage.hasTokens();
     if (hasTokens) {
@@ -36,40 +35,33 @@ class AuthNotifier extends _$AuthNotifier {
   // 회원가입
   Future<void> register(String email, String password) async {
     state = state.copyWith(isLoading: true, error: null);
-    
+
     try {
-      final loginResponse = await _authService.register(email, password);
-      
-      // 토큰 저장
-      await TokenStorage.saveTokens(
-        accessToken: loginResponse.accessToken,
-        refreshToken: loginResponse.refreshToken,
-      );
-      
-      // FCM 토큰 등록
-      final fcmToken = await FcmService.getFcmToken();
-      if (fcmToken != null) {
-        try {
-          await _authService.registerDevice(fcmToken);
-          print('FCM 토큰 등록 성공');
-        } catch (e) {
-          print('FCM 토큰 등록 실패: $e');
-          // FCM 토큰 등록 실패는 회원가입을 막지 않음
-        }
-      }
-      
-      state = state.copyWith(
-        isLoading: false,
-        isAuthenticated: true,
-        accessToken: loginResponse.accessToken,
-        refreshToken: loginResponse.refreshToken,
-      );
+      await _authService.register(email, password);
+
+      state = state.copyWith(isLoading: false);
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
         error: e.toString().replaceAll('Exception: ', ''),
       );
-      rethrow; // 에러를 다시 throw하여 UI에서 처리할 수 있도록
+      rethrow; 
+    }
+  }
+
+  // 비밀번호 초기화
+  Future<void> passwordReset(String email) async {
+    state = state.copyWith(isLoading: true, error: null);
+
+    try {
+      await _authService.passwordReset(email);
+      state = state.copyWith(isLoading: false);
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e.toString().replaceAll('Exception: ', ''),
+      );
+      rethrow;
     }
   }
 
@@ -80,13 +72,11 @@ class AuthNotifier extends _$AuthNotifier {
     try {
       final loginResponse = await _authService.login(email, password);
       
-              // 토큰 저장
         await TokenStorage.saveTokens(
           accessToken: loginResponse.accessToken,
           refreshToken: loginResponse.refreshToken,
         );
       
-      // FCM 토큰 등록
       final fcmToken = await FcmService.getFcmToken();
       if (fcmToken != null) {
         try {
@@ -94,7 +84,6 @@ class AuthNotifier extends _$AuthNotifier {
           print('FCM 토큰 등록 성공');
         } catch (e) {
           print('FCM 토큰 등록 실패: $e');
-          // FCM 토큰 등록 실패는 로그인을 막지 않음
         }
       }
       
@@ -112,16 +101,14 @@ class AuthNotifier extends _$AuthNotifier {
     }
   }
 
-  // 로그아웃
+  // 로그아웃 처리
   Future<void> logout() async {
     try {
-      // 서버에 로그아웃 요청
       try {
         await _authService.logout();
         print('로그아웃 API 호출 성공');
       } catch (e) {
         print('로그아웃 API 호출 실패: $e');
-        // API 호출 실패해도 로컬 로그아웃은 진행
       }
       
       // FCM 토큰 삭제
@@ -132,20 +119,18 @@ class AuthNotifier extends _$AuthNotifier {
           print('FCM 토큰 삭제 성공');
         } catch (e) {
           print('FCM 토큰 삭제 실패: $e');
-          // FCM 토큰 삭제 실패는 로그아웃을 막지 않음
         }
       }
       
-      // FCM 토큰 로컬 삭제
+      // 로컬 FCM 토큰 삭제
       await FcmService.deleteFcmToken();
       
-      // 토큰 삭제
+      // 저장 토큰 삭제
       await TokenStorage.deleteTokens();
       
       state = const AuthState();
     } catch (e) {
       print('로그아웃 중 오류: $e');
-      // 오류가 발생해도 로컬 상태는 초기화
       await TokenStorage.deleteTokens();
       state = const AuthState();
     }
@@ -178,7 +163,6 @@ class AuthNotifier extends _$AuthNotifier {
     state = state.copyWith(isLoading: true, error: null);
     
     try {
-      // 서버에 회원탈퇴 요청
       await _authService.quit();
       
       // FCM 토큰 삭제
@@ -192,10 +176,10 @@ class AuthNotifier extends _$AuthNotifier {
         }
       }
       
-      // FCM 토큰 로컬 삭제
+      // 로컬 FCM 토큰 제거
       await FcmService.deleteFcmToken();
       
-      // 토큰 삭제
+      // 남은 토큰 삭제
       await TokenStorage.deleteTokens();
       
       state = const AuthState();
@@ -208,25 +192,21 @@ class AuthNotifier extends _$AuthNotifier {
     }
   }
 
-  // 에러 초기화
   void clearError() {
     state = state.copyWith(error: null);
   }
 }
 
-// 현재 인증 상태를 읽기 전용으로 제공
 @riverpod
 AuthState authState(AuthStateRef ref) {
   return ref.watch(authNotifierProvider);
 }
 
-// 로딩 상태만 제공
 @riverpod
 bool isLoading(IsLoadingRef ref) {
   return ref.watch(authNotifierProvider).isLoading;
 }
 
-// 인증 상태만 제공
 @riverpod
 bool isAuthenticated(IsAuthenticatedRef ref) {
   return ref.watch(authNotifierProvider).isAuthenticated;

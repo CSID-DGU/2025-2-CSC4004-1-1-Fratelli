@@ -36,12 +36,14 @@ _$LoginResponseImpl _$$LoginResponseImplFromJson(Map<String, dynamic> json) =>
     _$LoginResponseImpl(
       accessToken: json['accessToken'] as String,
       refreshToken: json['refreshToken'] as String,
-      userInfo: UserInfo.fromJson(json['userInfo'] as Map<String, dynamic>),
+      accessTokenExpiresAt: json['accessTokenExpiresAt'] as String,
+      refreshTokenExpiresAt: json['refreshTokenExpiresAt'] as String,
     );
 
 Map<String, dynamic> _$$LoginResponseImplToJson(_$LoginResponseImpl instance) =>
     <String, dynamic>{
       'accessToken': instance.accessToken,
       'refreshToken': instance.refreshToken,
-      'userInfo': instance.userInfo,
+      'accessTokenExpiresAt': instance.accessTokenExpiresAt,
+      'refreshTokenExpiresAt': instance.refreshTokenExpiresAt,
     };
