@@ -30,16 +30,13 @@ class FcmService {
       
       // Firebase Messaging 초기화 시도
       try {
-        // 포그라운드 메시지 핸들러 설정
         FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
         print('포그라운드 메시지 핸들러 설정 완료');
         
-        // 백그라운드 메시지 핸들러 설정
         FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
         print('백그라운드 메시지 핸들러 설정 완료');
       } catch (firebaseError) {
         print('Firebase Messaging 설정 실패 (로컬 알림만 사용): $firebaseError');
-        // Firebase가 설정되지 않아도 로컬 알림은 사용 가능
       }
       
       _isInitialized = true;
@@ -48,7 +45,6 @@ class FcmService {
       print('FCM 초기화 실패: $e');
       print('스택 트레이스: $stackTrace');
       _isInitialized = false;
-      // 에러를 다시 throw하지 않음 - 앱이 계속 실행되도록
     }
   }
 
@@ -106,7 +102,7 @@ class FcmService {
     try {
       print('강력한 테스트 알림 시작...');
       
-      // iOS 시뮬레이터용 강력한 알림 설정
+      // iOS 시뮬레이터용
       const DarwinNotificationDetails iOSPlatformChannelSpecifics =
           DarwinNotificationDetails(
         presentAlert: true,
@@ -143,7 +139,6 @@ class FcmService {
         iOS: iOSPlatformChannelSpecifics,
       );
       
-      // 즉시 알림 표시
       await _localNotifications.show(
         1000,
         '🚨 강력한 테스트 알림 🚨',
@@ -153,7 +148,6 @@ class FcmService {
       
       print('강력한 테스트 알림 표시 완료');
       
-      // 3초 후 두 번째 알림
       await Future.delayed(Duration(seconds: 3));
       await _localNotifications.show(
         1001,
@@ -174,7 +168,6 @@ class FcmService {
     try {
       print('간단한 테스트 알림 시작...');
       
-      // 기본 설정으로 알림 표시
       await _localNotifications.show(
         999,
         '간단한 테스트',
@@ -229,7 +222,6 @@ class FcmService {
         iOS: iOSPlatformChannelSpecifics,
       );
       
-      // 여러 번 시도
       for (int i = 0; i < 3; i++) {
         await _localNotifications.show(
           i,
@@ -247,11 +239,9 @@ class FcmService {
     }
   }
 
-  // 포그라운드 메시지 처리
   static void _handleForegroundMessage(RemoteMessage message) {
     print('포그라운드 메시지 수신: ${message.notification?.title}');
     
-    // 로컬 알림 표시
     _showLocalNotification(message);
   }
 
@@ -321,7 +311,6 @@ class FcmService {
   }
 }
 
-// 백그라운드 메시지 핸들러 (최상위 레벨 함수여야 함)
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   print('백그라운드 메시지 수신: ${message.notification?.title}');

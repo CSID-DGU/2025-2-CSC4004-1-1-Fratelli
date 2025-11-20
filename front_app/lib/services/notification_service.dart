@@ -20,9 +20,13 @@ class NotificationService {
 
       if (response.statusCode == 200) {
         final responseData = response.data;
-        if (responseData['success'] == true && responseData['data'] != null) {
-          final List<dynamic> dataList = responseData['data'];
-          return dataList.map((item) => item as Map<String, dynamic>).toList();
+        if (responseData is Map<String, dynamic> &&
+            responseData['notifications'] is List) {
+          final List<dynamic> list = responseData['notifications'] as List<dynamic>;
+          return list
+              .where((item) => item is Map<String, dynamic>)
+              .map((item) => item as Map<String, dynamic>)
+              .toList();
         } else {
           throw Exception('서버 응답 형식이 올바르지 않습니다.');
         }

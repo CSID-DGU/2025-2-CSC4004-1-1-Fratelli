@@ -26,12 +26,11 @@ class AuthService {
       print('응답 데이터: ${response.data}');
 
       if (response.statusCode == 200) {
-        // 서버 응답 구조에 맞게 data 필드에서 추출
         final responseData = response.data;
-        if (responseData['success'] == true && responseData['data'] != null) {
-          return LoginResponse.fromJson(responseData['data']);
+        if (responseData is Map<String, dynamic>) {
+          return LoginResponse.fromJson(responseData);
         } else {
-          throw Exception('서버 응답 형식이 올바르지 않습니다.');
+          throw Exception('서버 응답 형식이 올바르지 않습니다. (JSON 객체 아님)');
         }
       } else {
         throw Exception('로그인 실패: ${response.statusMessage}');
@@ -62,7 +61,7 @@ class AuthService {
   }
 
   // 회원가입
-  Future<LoginResponse> register(String email, String password) async {
+  Future<void> register(String email, String password) async {
     try {
       print('회원가입 시도: $email');
       print('회원가입 엔드포인트: /api/v1/auth/register');
@@ -77,35 +76,20 @@ class AuthService {
       );
 
       print('응답 상태 코드: ${response.statusCode}');
+      print('응답 데이터 타입: ${response.data.runtimeType}');
       print('응답 데이터: ${response.data}');
 
+      // 회원가입 성공
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final responseData = response.data;
-        print('응답 데이터 타입: ${responseData.runtimeType}');
-        print('응답 데이터 전체: $responseData');
-        
-        if (responseData['success'] == true && responseData['data'] != null) {
-          final data = responseData['data'];
-          print('data 필드 타입: ${data.runtimeType}');
-          print('data 필드 내용: $data');
-          
-          // data가 Map인지 확인
-          if (data is! Map<String, dynamic>) {
-            print('에러: data가 Map이 아닙니다. 타입: ${data.runtimeType}');
-            throw Exception('서버 응답 형식이 올바르지 않습니다. data 필드가 Map이 아닙니다.');
-          }
-          
-          return LoginResponse.fromJson(data);
-        } else {
-          print('응답 형식 오류 - success: ${responseData['success']}, data: ${responseData['data']}');
-          final errorMessage = responseData['message'] ?? responseData['error'] ?? '알 수 없는 오류';
-          throw Exception('서버 응답 형식이 올바르지 않습니다. $errorMessage');
-        }
+        print('회원가입 성공 (바디 없음, 상태 코드로만 확인)');
+        return;
       } else {
         final responseData = response.data;
         String errorMessage;
         
-        if (responseData is Map) {
+        if (responseData == null || responseData == '' || (responseData is String && responseData.trim().isEmpty)) {
+          errorMessage = response.statusMessage ?? '알 수 없는 오류';
+        } else if (responseData is Map) {
           errorMessage = responseData['message'] ?? 
                         responseData['error'] ?? 
                         responseData['msg'] ??
@@ -133,6 +117,12 @@ class AuthService {
     } on DioException catch (e) {
       print('DioException 발생: ${e.type}');
       print('에러 메시지: ${e.message}');
+      print('에러 전체: ${e.toString()}');
+      print('요청 URI: ${e.requestOptions.uri}');
+      if (e.error != null) {
+        print('에러 객체: ${e.error}');
+        print('에러 객체 타입: ${e.error.runtimeType}');
+      }
       print('응답 데이터: ${e.response?.data}');
       print('상태 코드: ${e.response?.statusCode}');
       
@@ -156,8 +146,16 @@ class AuthService {
         throw Exception('서버 응답 시간이 초과되었습니다.');
       } else if (e.type == DioExceptionType.connectionError) {
         throw Exception('서버에 연결할 수 없습니다. 네트워크를 확인해주세요.');
+      } else if (e.type == DioExceptionType.unknown) {
+        String errorMsg = '서버에 연결할 수 없습니다. ';
+        if (e.error != null) {
+          errorMsg += '오류: ${e.error}';
+        } else {
+          errorMsg += '서버가 실행 중인지 확인해주세요.';
+        }
+        throw Exception(errorMsg);
       } else {
-        throw Exception('네트워크 오류가 발생했습니다: ${e.message}');
+        throw Exception('네트워크 오류가 발생했습니다: ${e.message ?? e.toString()}');
       }
     } catch (e) {
       print('일반 Exception 발생: $e');
@@ -177,10 +175,17 @@ class AuthService {
 
       if (response.statusCode == 200) {
         final responseData = response.data;
-        if (responseData['success'] == true) {
-          print('로그아웃 성공');
+        if (responseData is Map<String, dynamic>) {
+          final message = responseData['message']?.toString() ?? '';
+          if (message.toLowerCase().contains('success')) {
+            print('로그아웃 성공: $message');
+            return;
+          } else {
+            throw Exception('로그아웃 실패: $message');
+          }
         } else {
-          throw Exception('로그아웃 실패: ${responseData['message']}');
+          print('로그아웃 성공');
+          return;
         }
       } else {
         throw Exception('로그아웃 실패: ${response.statusMessage}');
@@ -214,8 +219,13 @@ class AuthService {
 
       if (response.statusCode == 200) {
         final responseData = response.data;
-        if (responseData['success'] == true && responseData['data'] != null) {
-          return UserInfo.fromJson(responseData['data']);
+        if (responseData is Map<String, dynamic> &&
+            responseData['email'] is String) {
+          return UserInfo(
+            id: 0,
+            email: responseData['email'] as String,
+            nickname: '',
+          );
         } else {
           throw Exception('서버 응답 형식이 올바르지 않습니다.');
         }
@@ -254,8 +264,13 @@ class AuthService {
 
       if (response.statusCode == 200) {
         final responseData = response.data;
-        if (responseData['success'] == true && responseData['data'] != null) {
-          return UserInfo.fromJson(responseData['data']);
+        if (responseData is Map<String, dynamic> &&
+            responseData['email'] is String) {
+          return UserInfo(
+            id: 0,
+            email: responseData['email'] as String,
+            nickname: '',
+          );
         } else {
           throw Exception('서버 응답 형식이 올바르지 않습니다.');
         }
@@ -286,13 +301,14 @@ class AuthService {
     try {
       print('회원탈퇴 요청');
       
-      final response = await _apiService.deleteWithAuth('/api/v1/auth/delete');
+      final response = await _apiService.postWithAuth('/api/v1/auth/quit');
 
       print('응답 상태 코드: ${response.statusCode}');
       print('응답 데이터: ${response.data}');
 
       if (response.statusCode == 200) {
         print('회원탈퇴 성공');
+        return;
       } else {
         throw Exception('회원탈퇴 실패: ${response.statusMessage}');
       }
@@ -371,12 +387,8 @@ class AuthService {
       print('응답 데이터: ${response.data}');
 
       if (response.statusCode == 200) {
-        final responseData = response.data;
-        if (responseData['success'] == true) {
-          print('디바이스 삭제 성공');
-        } else {
-          throw Exception('디바이스 삭제 실패: ${responseData['message']}');
-        }
+        print('디바이스 삭제 성공');
+        return;
       } else {
         throw Exception('디바이스 삭제 실패: ${response.statusMessage}');
       }
@@ -396,4 +408,108 @@ class AuthService {
       throw Exception('알 수 없는 오류가 발생했습니다: $e');
     }
   }
-} 
+  // 비밀번호 재설정 요청
+  Future<void> passwordReset(String email) async {
+    try {
+      print('비밀번호 재설정 요청: $email');
+
+      final response = await _apiService.post(
+        '/api/v1/auth/password-reset',
+        data: {
+          'email': email,
+        },
+      );
+
+      print('응답 상태 코드: ${response.statusCode}');
+      print('응답 데이터: ${response.data}');
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        print('비밀번호 재설정 메일 전송 성공');
+        return;
+      } else {
+        final responseData = response.data;
+        String errorMessage;
+
+        if (responseData is Map) {
+          errorMessage = responseData['message'] ??
+              responseData['error'] ??
+              response.statusMessage ??
+              '알 수 없는 오류';
+        } else if (responseData is String && responseData.isNotEmpty) {
+          errorMessage = responseData;
+        } else {
+          errorMessage = response.statusMessage ?? '알 수 없는 오류';
+        }
+
+        throw Exception(
+            '비밀번호 재설정 요청 실패 (${response.statusCode}): $errorMessage');
+      }
+    } on DioException catch (e) {
+      print('DioException 발생: ${e.type}');
+      print('에러 메시지: ${e.message}');
+      print('응답 데이터: ${e.response?.data}');
+      print('상태 코드: ${e.response?.statusCode}');
+
+      if (e.type == DioExceptionType.connectionTimeout) {
+        throw Exception('서버 연결 시간이 초과되었습니다.');
+      } else if (e.type == DioExceptionType.receiveTimeout) {
+        throw Exception('서버 응답 시간이 초과되었습니다.');
+      } else if (e.type == DioExceptionType.connectionError) {
+        throw Exception('서버에 연결할 수 없습니다. 네트워크를 확인해주세요.');
+      } else {
+        throw Exception('네트워크 오류가 발생했습니다: ${e.message}');
+      }
+    } catch (e) {
+      print('일반 Exception 발생: $e');
+      throw Exception('알 수 없는 오류가 발생했습니다: $e');
+    }
+  }
+
+  // 리프레시 토큰으로 토큰 재발급
+  Future<LoginResponse> refreshAccessToken(String refreshToken) async {
+    try {
+      print('리프레시 토큰으로 재발급 시도');
+
+      final response = await _apiService.post(
+        '/api/v1/auth/refresh',
+        data: {
+          'refreshToken': refreshToken,
+        },
+      );
+
+      print('응답 상태 코드: ${response.statusCode}');
+      print('응답 데이터: ${response.data}');
+
+      if (response.statusCode == 200) {
+        final responseData = response.data;
+        if (responseData is Map<String, dynamic>) {
+          return LoginResponse.fromJson(responseData);
+        } else {
+          throw Exception('서버 응답 형식이 올바르지 않습니다. (JSON 객체 아님)');
+        }
+      } else {
+        throw Exception('토큰 재발급 실패: ${response.statusMessage}');
+      }
+    } on DioException catch (e) {
+      print('DioException 발생(리프레시): ${e.type}');
+      print('에러 메시지: ${e.message}');
+      print('응답 데이터: ${e.response?.data}');
+      print('상태 코드: ${e.response?.statusCode}');
+
+      if (e.response?.statusCode == 401) {
+        throw Exception('리프레시 토큰이 유효하지 않습니다. 다시 로그인해주세요.');
+      } else if (e.type == DioExceptionType.connectionTimeout) {
+        throw Exception('서버 연결 시간이 초과되었습니다.');
+      } else if (e.type == DioExceptionType.receiveTimeout) {
+        throw Exception('서버 응답 시간이 초과되었습니다.');
+      } else if (e.type == DioExceptionType.connectionError) {
+        throw Exception('서버에 연결할 수 없습니다. 네트워크를 확인해주세요.');
+      } else {
+        throw Exception('네트워크 오류가 발생했습니다: ${e.message}');
+      }
+    } catch (e) {
+      print('일반 Exception 발생(리프레시): $e');
+      throw Exception('알 수 없는 오류가 발생했습니다: $e');
+    }
+  }
+}

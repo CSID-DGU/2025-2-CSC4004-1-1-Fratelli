@@ -5,7 +5,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/services.dart';
 
 Future<void> downloadFile(String sourcePath, String fileName, BuildContext context) async {
-  // 1. 저장소 권한 요청
+  // 저장소 권한 요청
   var status = await Permission.storage.request();
   if (!status.isGranted) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -15,7 +15,7 @@ Future<void> downloadFile(String sourcePath, String fileName, BuildContext conte
   }
 
   try {
-    // 2. Android는 외부 저장소, iOS는 앱 Documents
+    // Android는 외부 저장소, iOS는 앱 Documents
     Directory directory;
     if (Platform.isAndroid) {
       directory = Directory('/storage/emulated/0/Deepflect');
@@ -23,21 +23,21 @@ Future<void> downloadFile(String sourcePath, String fileName, BuildContext conte
       directory = await getApplicationDocumentsDirectory();
     }
 
-    // 3. 폴더 없으면 생성
+    // 폴더 없으면 생성
     if (!await directory.exists()) {
       await directory.create(recursive: true);
     }
 
-    // 4. 파일 저장
+    // 파일 저장
     final File newFile = File('${directory.path}/$fileName');
 
     if (sourcePath.startsWith('assets/')) {
-      // asset 파일일 경우 ByteData 읽어서 저장
+      // asset 파일
       ByteData data = await rootBundle.load(sourcePath);
       final bytes = data.buffer.asUint8List();
       await newFile.writeAsBytes(bytes);
     } else {
-      // 로컬 파일일 경우 복사
+      // 로컬 파일
       await File(sourcePath).copy(newFile.path);
     }
 

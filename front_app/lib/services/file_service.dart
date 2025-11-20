@@ -19,6 +19,7 @@ class FileService {
       print('파일 업로드 요청: ${file.path}, type: $type');
       
       final fileName = file.path.split('/').last;
+      // 명세: form-data, key: (파일 필드 하나) → 여기서는 'file' 키로 전송
       final formData = FormData.fromMap({
         'file': await MultipartFile.fromFile(
           file.path,
@@ -37,8 +38,17 @@ class FileService {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final responseData = response.data;
-        if (responseData['success'] == true && responseData['data'] != null) {
-          return responseData['data'] as Map<String, dynamic>;
+        // 명세(최신):
+        // FileUploadResponse {
+        //   "taskId": "f_67890",
+        //   "fileName": "video1.mp4",
+        //   "fileType": "video",
+        //   "size": 10485760, // 바이트
+        //   "status": "uploading",
+        //   "timestamp": "2025-10-09T12:00:00Z"
+        // }
+        if (responseData is Map<String, dynamic>) {
+          return responseData;
         } else {
           throw Exception('서버 응답 형식이 올바르지 않습니다.');
         }
@@ -67,20 +77,41 @@ class FileService {
   }
 
   // 업로드 중인 파일 목록
-  Future<List<Map<String, dynamic>>> getUploadingFiles() async {
+  Future<List<Map<String, dynamic>>> getUploadingFiles({String? type}) async {
     try {
-      print('업로드 중인 파일 목록 요청');
+      print('업로드 중인 파일 목록 요청, type: $type');
+
+      final endpoint = type != null
+          ? '/api/v1/files/uploads?type=$type'
+          : '/api/v1/files/uploads';
       
-      final response = await _apiService.getWithAuth('/api/v1/files/uploads');
+      final response = await _apiService.getWithAuth(endpoint);
 
       print('응답 상태 코드: ${response.statusCode}');
       print('응답 데이터: ${response.data}');
 
       if (response.statusCode == 200) {
         final responseData = response.data;
-        if (responseData['success'] == true && responseData['data'] != null) {
-          final List<dynamic> dataList = responseData['data'];
-          return dataList.map((item) => item as Map<String, dynamic>).toList();
+        // 명세(최신): 
+        // {
+        //   "uploads": [
+        //     {
+        //       "taskId": "f_67890",
+        //       "fileName": "video1.mp4",
+        //       "fileType": "video",
+        //       "status": "uploading",
+        //       "timestamp": "2025-10-09T12:00:00Z"
+        //     },
+        //     ...
+        //   ]
+        // }
+        if (responseData is Map<String, dynamic> &&
+            responseData['uploads'] is List) {
+          final List<dynamic> uploads = responseData['uploads'] as List<dynamic>;
+          return uploads
+              .where((item) => item is Map<String, dynamic>)
+              .map((item) => item as Map<String, dynamic>)
+              .toList();
         } else {
           throw Exception('서버 응답 형식이 올바르지 않습니다.');
         }
@@ -104,13 +135,13 @@ class FileService {
     }
   }
 
-  // 업로드 취소(삭제)
-  Future<void> cancelUpload(String tempFileId) async {
+  // 업로드 취소(삭제) - taskId 기준
+  Future<void> cancelUpload(String taskId) async {
     try {
-      print('업로드 취소 요청: $tempFileId');
+      print('업로드 취소 요청: $taskId');
       
       final response = await _apiService.deleteWithAuth(
-        '/api/v1/files/uploads/$tempFileId',
+        '/api/v1/files/uploads/$taskId',
       );
 
       print('응답 상태 코드: ${response.statusCode}');
@@ -156,9 +187,27 @@ class FileService {
 
       if (response.statusCode == 200) {
         final responseData = response.data;
-        if (responseData['success'] == true && responseData['data'] != null) {
-          final List<dynamic> dataList = responseData['data'];
-          return dataList.map((item) => item as Map<String, dynamic>).toList();
+        // 명세(최신):
+        // FileListResponse {
+        //   "files": [
+        //     {
+        //       "taskId": "f_67890",
+        //       "fileName": "video1.mp4",
+        //       "fileType": "video",
+        //       "size": 10485760,
+        //       "url": "https://...",
+        //       "timestamp": "2025-10-09T12:05:00Z"
+        //     },
+        //     ...
+        //   ]
+        // }
+        if (responseData is Map<String, dynamic> &&
+            responseData['files'] is List) {
+          final List<dynamic> files = responseData['files'] as List<dynamic>;
+          return files
+              .where((item) => item is Map<String, dynamic>)
+              .map((item) => item as Map<String, dynamic>)
+              .toList();
         } else {
           throw Exception('서버 응답 형식이 올바르지 않습니다.');
         }
@@ -182,54 +231,13 @@ class FileService {
     }
   }
 
-  // 결과 미리보기
-  Future<Map<String, dynamic>> getPreview(String fileId) async {
-    try {
-      print('결과 미리보기 요청: $fileId');
-      
-      final response = await _apiService.getWithAuth(
-        '/api/v1/files/$fileId/preview',
-      );
-
-      print('응답 상태 코드: ${response.statusCode}');
-      print('응답 데이터: ${response.data}');
-
-      if (response.statusCode == 200) {
-        final responseData = response.data;
-        if (responseData['success'] == true && responseData['data'] != null) {
-          return responseData['data'] as Map<String, dynamic>;
-        } else {
-          throw Exception('서버 응답 형식이 올바르지 않습니다.');
-        }
-      } else {
-        throw Exception('미리보기 조회 실패: ${response.statusMessage}');
-      }
-    } on DioException catch (e) {
-      print('DioException 발생: ${e.type}');
-      print('에러 메시지: ${e.message}');
-      print('응답 데이터: ${e.response?.data}');
-      print('상태 코드: ${e.response?.statusCode}');
-      
-      if (e.response?.statusCode == 401) {
-        throw Exception('인증이 만료되었습니다. 다시 로그인해주세요.');
-      } else if (e.response?.statusCode == 404) {
-        throw Exception('파일을 찾을 수 없습니다.');
-      } else {
-        throw Exception('네트워크 오류가 발생했습니다: ${e.message}');
-      }
-    } catch (e) {
-      print('일반 Exception 발생: $e');
-      throw Exception('알 수 없는 오류가 발생했습니다: $e');
-    }
-  }
-
   // 결과 다운로드 URL 가져오기
-  Future<String> getDownloadUrl(String fileId) async {
+  Future<String> getDownloadUrl(String taskId) async {
     try {
-      print('결과 다운로드 요청: $fileId');
+      print('결과 다운로드 요청: $taskId');
       
       final response = await _apiService.getWithAuth(
-        '/api/v1/files/$fileId/download',
+        '/api/v1/files/$taskId/download',
       );
 
       print('응답 상태 코드: ${response.statusCode}');
@@ -237,10 +245,14 @@ class FileService {
 
       if (response.statusCode == 200) {
         final responseData = response.data;
-        if (responseData['success'] == true && responseData['data'] != null) {
-          final downloadData = responseData['data'] as Map<String, dynamic>;
-          // 다운로드 URL이 있다면 반환
-          return downloadData['url'] ?? downloadData['downloadUrl'] ?? '';
+        if (responseData is Map<String, dynamic>) {
+          // 명세에 따라 downloadUrl 필드 사용
+          final url = responseData['downloadUrl'];
+          if (url is String && url.isNotEmpty) {
+            return url;
+          } else {
+            throw Exception('다운로드 URL이 응답에 없습니다.');
+          }
         } else {
           throw Exception('서버 응답 형식이 올바르지 않습니다.');
         }
@@ -267,16 +279,16 @@ class FileService {
   }
 
   // 결과 파일 다운로드 및 저장
-  Future<String> downloadFile(String fileId, String fileName) async {
+  Future<String> downloadFile(String taskId, String fileName) async {
     try {
-      // 1. 다운로드 URL 가져오기
-      var downloadUrl = await getDownloadUrl(fileId);
+      // 다운로드 URL 가져오기
+      var downloadUrl = await getDownloadUrl(taskId);
       
       if (downloadUrl.isEmpty) {
         throw Exception('다운로드 URL을 가져올 수 없습니다.');
       }
 
-      // 2. 상대 URL인 경우 baseUrl 추가
+      // 상대 URL
       if (!downloadUrl.startsWith('http://') && !downloadUrl.startsWith('https://')) {
         String baseUrl = 'http://localhost:3000';
         try {
@@ -287,20 +299,19 @@ class FileService {
         } catch (e) {
           print('dotenv 접근 실패, 기본 URL 사용: $e');
         }
-        // 상대 URL이 /로 시작하지 않으면 추가
         if (!downloadUrl.startsWith('/')) {
           downloadUrl = '/$downloadUrl';
         }
         downloadUrl = '$baseUrl$downloadUrl';
       }
 
-      // 3. 저장소 권한 요청
+      // 저장소 권한 요청
       var status = await Permission.storage.request();
       if (!status.isGranted) {
         throw Exception('저장소 권한이 필요합니다.');
       }
 
-      // 4. 저장 디렉토리 설정
+      // 저장 디렉토리 설정
       Directory directory;
       if (Platform.isAndroid) {
         directory = Directory('/storage/emulated/0/Deepflect');
@@ -309,12 +320,12 @@ class FileService {
         directory = Directory('${directory.path}/Deepflect');
       }
 
-      // 5. 폴더가 없으면 생성
+      // 폴더가 없으면 생성
       if (!await directory.exists()) {
         await directory.create(recursive: true);
       }
 
-      // 6. 파일 다운로드
+      // 파일 다운로드
       final accessToken = await TokenStorage.getAccessToken();
       final dio = Dio();
       
@@ -346,11 +357,11 @@ class FileService {
   }
 
   // 결과 파일 삭제
-  Future<void> deleteFile(String fileId) async {
+  Future<void> deleteFile(String taskId) async {
     try {
-      print('결과 파일 삭제 요청: $fileId');
+      print('결과 파일 삭제 요청: $taskId');
       
-      final response = await _apiService.deleteWithAuth('/api/v1/files/$fileId');
+      final response = await _apiService.deleteWithAuth('/api/v1/files/$taskId');
 
       print('응답 상태 코드: ${response.statusCode}');
       print('응답 데이터: ${response.data}');
