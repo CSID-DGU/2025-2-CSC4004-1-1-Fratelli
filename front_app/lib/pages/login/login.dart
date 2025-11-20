@@ -48,7 +48,7 @@ class _LoginMainState extends ConsumerState<LoginMain> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authNotifierProvider);
 
-    // 로그인 성공 시 처리
+    // 로그인 성공
     if (authState.isAuthenticated) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -57,12 +57,11 @@ class _LoginMainState extends ConsumerState<LoginMain> {
             backgroundColor: Color.fromARGB(255, 57, 132, 58),
           ),
         );
-        // 메인 페이지로 이동 (이전 버튼 없애기)
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
             builder: (context) => const HomePage(),
           ),
-          (route) => false, // 모든 이전 라우트 제거
+          (route) => false, 
         );
       });
     }
@@ -86,7 +85,6 @@ class _LoginMainState extends ConsumerState<LoginMain> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.start,
           children: <Widget>[
-            // 뒤로가기 버튼 (상단 고정)
             Padding(
               padding: const EdgeInsets.only(left: 10.0, top: 15.0),
               child: IconButton(
@@ -98,7 +96,7 @@ class _LoginMainState extends ConsumerState<LoginMain> {
               ),
             ),
             
-            // 제목 영역
+            // 제목
             Padding(
               padding: const EdgeInsets.only(
                 left: 30.0,
@@ -132,7 +130,7 @@ class _LoginMainState extends ConsumerState<LoginMain> {
               ),
             ),
             
-            // 폼 필드 영역
+            // 폼 필드
             Expanded(
               child: Align(
                 alignment: Alignment.topCenter,

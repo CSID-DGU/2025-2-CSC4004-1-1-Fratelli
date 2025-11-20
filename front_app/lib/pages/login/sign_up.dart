@@ -19,7 +19,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
   final _confirmPasswordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   String? _errorMessage;
-  bool _hasNavigated = false; // 네비게이션 중복 방지
+  bool _hasNavigated = false;
 
   @override
   void dispose() {
@@ -35,7 +35,6 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     // 폼 유효성 검사
     if (!_formKey.currentState!.validate()) {
       print('폼 유효성 검사 실패');
-      // 각 필드를 수동으로 검증하여 에러 메시지 표시
       final emailError = _validateEmail(_emailController.text);
       final passwordError = _validatePassword(_passwordController.text);
       final confirmPasswordError = _validateConfirmPassword(_confirmPasswordController.text);
@@ -78,7 +77,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
       
       print('회원가입 성공');
       
-      // 회원가입 성공 시 로그인 페이지로 이동
+      // 회원가입 성공
       if (mounted && !_hasNavigated) {
         _hasNavigated = true;
         print('로그인 페이지로 이동');
@@ -89,15 +88,14 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
           ),
         );
         
-        // 인증 상태 초기화 (회원가입만 하고 로그인은 따로 하도록)
+        // 인증 상태 초기화
         await ref.read(authNotifierProvider.notifier).logout();
         
-        // 로그인 페이지로 이동
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
             builder: (context) => const LoginMain(),
           ),
-          (route) => false, // 모든 이전 라우트 제거
+          (route) => false,
         );
       }
     } catch (e) {
@@ -175,7 +173,6 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: <Widget>[
-                    // 뒤로가기 버튼 (상단 고정)
                     Padding(
                       padding: const EdgeInsets.only(left: 10.0, top: 15.0),
                       child: IconButton(
@@ -187,7 +184,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                       ),
                     ),
                     
-                    // 제목 영역
+                    // 제목
                     Padding(
                       padding: EdgeInsets.only(
                         left: 30.0,
@@ -223,7 +220,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                     
                     SizedBox(height: screenHeight < 700 ? 10 : 20),
 
-                    // 폼 필드 영역
+                    // 폼 필드
                     Flexible(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -288,7 +285,6 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                               text: isLoading ? "처리 중..." : "회원가입",
                               onTap: isLoading ? null : _handleSignUp,
                             ),
-                            // 키보드가 올라올 때 여유 공간 확보
                             SizedBox(height: keyboardHeight > 0 ? 20 : 0),
                           ],
                         ),

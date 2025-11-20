@@ -1,20 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:deepflect_app/widgets/login/full_form_input.dart';
 import 'package:deepflect_app/widgets/login/login_button.dart';
 import 'package:deepflect_app/pages/login/sent_password.dart';
+import 'package:deepflect_app/models/auth/auth_provider.dart';
 
-class FindPasswordPage extends StatefulWidget {
+class FindPasswordPage extends ConsumerStatefulWidget {
   const FindPasswordPage({super.key});
 
   @override
-  State<FindPasswordPage> createState() => _FindPasswordState();
+  ConsumerState<FindPasswordPage> createState() => _FindPasswordState();
 }
 
-class _FindPasswordState extends State<FindPasswordPage> {
+class _FindPasswordState extends ConsumerState<FindPasswordPage> {
   final TextEditingController _emailController = TextEditingController();
 
-  void _sendPasswordResetEmail() {
+  Future<void> _sendPasswordResetEmail() async {
     final email = _emailController.text.trim();
 
     if (email.isEmpty) {
@@ -27,16 +29,33 @@ class _FindPasswordState extends State<FindPasswordPage> {
       return;
     }
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => SentPasswordPage(email: email),
-      ),
-    );
+    try {
+      // 비밀번호 재설정 API 호출
+      await ref.read(authNotifierProvider.notifier).passwordReset(email);
+
+      if (!mounted) return;
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SentPasswordPage(email: email),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceAll('Exception: ', '')),
+          backgroundColor: Colors.red[700],
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authNotifierProvider);
+    final isLoading = authState.isLoading;
     return Scaffold(
       resizeToAvoidBottomInset: true, 
       body: SafeArea(
@@ -44,7 +63,6 @@ class _FindPasswordState extends State<FindPasswordPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.start,
           children: <Widget>[
-            // 뒤로가기 버튼 (상단 고정)
             Padding(
               padding: const EdgeInsets.only(left: 10.0, top: 15.0),
               child: IconButton(
@@ -52,11 +70,11 @@ class _FindPasswordState extends State<FindPasswordPage> {
                   Icons.chevron_left,
                   color: Color.fromRGBO(39, 0, 93, 1),
                 ),
-                onPressed: () => Navigator.pop(context),
+                onPressed: isLoading ? null : () => Navigator.pop(context),
               ),
             ),
             
-            // 제목 영역
+            // 제목
             Padding(
               padding: const EdgeInsets.only(
                 left: 30.0,
@@ -88,7 +106,7 @@ class _FindPasswordState extends State<FindPasswordPage> {
               ),
             ),
             
-            // 폼 필드 영역
+            // 폼 필드
             Expanded(
               child: Align(
                 alignment: Alignment.topCenter,
@@ -111,8 +129,8 @@ class _FindPasswordState extends State<FindPasswordPage> {
 
                     // 발송 버튼
                     LoginButton(
-                      text: "이메일 발송",
-                      onTap: _sendPasswordResetEmail,
+                      text: isLoading ? "처리 중..." : "이메일 발송",
+                      onTap: isLoading ? null : _sendPasswordResetEmail,
                     ),
                   ],
                 ),

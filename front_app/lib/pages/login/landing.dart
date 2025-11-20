@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:deepflect_app/pages/login/login.dart';
 import 'package:deepflect_app/pages/login/sign_up.dart';
-import 'package:deepflect_app/services/fcm_service.dart';
 import 'package:deepflect_app/widgets/login/login_button.dart';
 import 'package:deepflect_app/widgets/login/full_button.dart';
 
@@ -17,7 +16,6 @@ class LandingPage extends StatelessWidget {
         child: Column(
           children: [
             Expanded(flex: 3, child: SizedBox()),
-            // 하단 콘텐츠 영역 (전체 높이의 50%)
             Expanded(
               flex: 7,
               child: Padding(

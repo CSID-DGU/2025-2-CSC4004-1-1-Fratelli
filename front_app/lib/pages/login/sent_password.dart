@@ -54,7 +54,7 @@ class SentPasswordPage extends StatelessWidget {
                     MaterialPageRoute(
                       builder: (context) => const LoginMain(),
                     ),
-                    (route) => false, // 모든 이전 라우트 제거
+                    (route) => false,
                   );
                 },
                 style: ElevatedButton.styleFrom(
