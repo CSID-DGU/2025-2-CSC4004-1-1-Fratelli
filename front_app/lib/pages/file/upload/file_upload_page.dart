@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:deepflect_app/widgets/file/upload/file_upload_button.dart';
 import 'package:deepflect_app/widgets/file/upload/upload_progress_button.dart';
-import 'package:deepflect_app/pages/file/upload/file_preview_page.dart';
 import 'package:deepflect_app/services/file_service.dart';
 
 class FileUploadPage extends StatefulWidget {
@@ -27,7 +26,49 @@ class _FileUploadPageState extends State<FileUploadPage> {
     } else if (extension == 'jpg' || extension == 'jpeg' || extension == 'png') {
       return 'image';
     }
-    return 'image'; // 기본값
+    return 'image';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUploadingFiles();
+  }
+
+  Future<void> _loadUploadingFiles() async {
+    try {
+      final uploads = await _fileService.getUploadingFiles();
+
+      if (!mounted) return;
+
+      setState(() {
+        for (final item in uploads) {
+          final formattedSize = _formatFileSize(item['size']);
+          files.add({
+            "name": item['fileName']?.toString() ?? '',
+            "size": formattedSize,
+            "progress": (item['progress'] is num)
+                ? (item['progress'] as num).clamp(0, 100) / 100.0
+                : 0.0,
+            "status": item['status']?.toString() ?? 'uploading',
+            "file": null,
+            "fileType": item['fileType']?.toString() ?? 'image',
+            "taskId": item['taskId']?.toString(),
+          });
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '업로드 중인 파일 목록을 불러오지 못했습니다: '
+            '${e.toString().replaceAll('Exception: ', '')}',
+          ),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
   }
 
   Future<void> _onFileSelected(List<PlatformFile> selectedFiles) async {
@@ -36,7 +77,6 @@ class _FileUploadPageState extends State<FileUploadPage> {
       final fileSize = "${(platformFile.size / 1024).toStringAsFixed(2)} KB";
       final fileType = _determineFileType(fileName);
       
-      // 파일이 로컬 경로를 가지고 있는지 확인
       if (platformFile.path == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -71,11 +111,10 @@ class _FileUploadPageState extends State<FileUploadPage> {
           "status": "uploading",
           "file": file,
           "fileType": fileType,
-          "tempFileId": null, // 업로드 시작 후 서버에서 받은 tempFileId
+          "taskId": null, // 업로드 시작 후 서버에서 받은 taskId
         });
       });
 
-      // 실제 업로드 시작
       _uploadFile(fileIndex, file, fileType);
     }
   }
@@ -87,13 +126,11 @@ class _FileUploadPageState extends State<FileUploadPage> {
       if (!mounted) return;
 
       setState(() {
-        files[index]["tempFileId"] = response['tempFileId'];
+        files[index]["taskId"] = response['taskId']?.toString();
         files[index]["status"] = "done";
         files[index]["progress"] = 1.0;
-        files[index]["fileId"] = response['fileId'];
       });
 
-      // 업로드 성공 시 콜백 호출하여 히스토리 페이지 새로고침
       widget.onUploadSuccess?.call();
     } catch (e) {
       if (!mounted) return;
@@ -115,10 +152,9 @@ class _FileUploadPageState extends State<FileUploadPage> {
 
   Future<void> _cancelUpload(int index) async {
     final file = files[index];
-    final tempFileId = file["tempFileId"];
+    final taskId = file["taskId"];
 
-    if (tempFileId == null) {
-      // 아직 업로드가 시작되지 않았거나 완료된 경우
+    if (taskId == null) {
       setState(() {
         files.removeAt(index);
       });
@@ -126,7 +162,7 @@ class _FileUploadPageState extends State<FileUploadPage> {
     }
 
     try {
-      await _fileService.cancelUpload(tempFileId.toString());
+      await _fileService.cancelUpload(taskId.toString());
       if (mounted) {
         setState(() {
           files.removeAt(index);
@@ -167,6 +203,32 @@ class _FileUploadPageState extends State<FileUploadPage> {
     final extension = fileName.toLowerCase().split('.').last;
     if (extension == 'mp4' || extension == 'mp3') return UploadType.video;
     return UploadType.image;
+  }
+
+  String _formatFileSize(dynamic rawSize) {
+    if (rawSize == null) return '';
+
+    double? parsedSize;
+    if (rawSize is num) {
+      parsedSize = rawSize.toDouble();
+    } else {
+      parsedSize = double.tryParse(rawSize.toString());
+    }
+
+    if (parsedSize == null || parsedSize <= 0) return '';
+
+    var sizeValue = parsedSize;
+
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    var unitIndex = 0;
+
+    while (sizeValue >= 1024 && unitIndex < units.length - 1) {
+      sizeValue /= 1024;
+      unitIndex++;
+    }
+
+    final fixed = unitIndex == 0 ? 0 : 2;
+    return '${sizeValue.toStringAsFixed(fixed)} ${units[unitIndex]}';
   }
 
   @override
@@ -235,7 +297,7 @@ class _FileUploadPageState extends State<FileUploadPage> {
                     final file = files[index];
                     return Dismissible(
                       key: Key('${file["name"]}_$index'),
-                      direction: DismissDirection.endToStart, // 오른쪽에서 왼쪽으로 스와이프
+                      direction: DismissDirection.endToStart,
                       background: Container(
                         alignment: Alignment.centerRight,
                         padding: const EdgeInsets.only(right: 20),
@@ -258,56 +320,9 @@ class _FileUploadPageState extends State<FileUploadPage> {
                         progress: file["progress"],
                         status: _convertStatus(file["status"]),
                         type: _determineUploadType(file["name"]),
-                        onPreview: () async {
-                          final fileId = file["fileId"];
-                          if (fileId != null) {
-                            try {
-                              final previewData = await _fileService.getPreview(fileId.toString());
-                              final previewUrl = previewData['previewUrl']?.toString() ?? 
-                                               previewData['url']?.toString() ?? '';
-                              
-                              if (mounted) {
-                                if (previewUrl.isNotEmpty) {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => FilePreviewPage(
-                                        fileName: file["name"],
-                                        filePath: previewUrl,
-                                      ),
-                                    ),
-                                  );
-                                } else {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('미리보기 URL을 가져올 수 없습니다.'),
-                                      backgroundColor: Colors.orange,
-                                    ),
-                                  );
-                                }
-                              }
-                            } catch (e) {
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('미리보기 실패: ${e.toString().replaceAll('Exception: ', '')}'),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                              }
-                            }
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('파일 미리보기를 사용할 수 없습니다.'),
-                                backgroundColor: Colors.orange,
-                              ),
-                            );
-                          }
-                        },
                         onDownload: () async {
-                          final fileId = file["fileId"];
-                          if (fileId != null) {
+                          final taskId = file["taskId"];
+                          if (taskId != null) {
                             try {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
@@ -317,7 +332,7 @@ class _FileUploadPageState extends State<FileUploadPage> {
                               );
                               
                               final savedPath = await _fileService.downloadFile(
-                                fileId.toString(),
+                                taskId.toString(),
                                 file["name"],
                               );
                               

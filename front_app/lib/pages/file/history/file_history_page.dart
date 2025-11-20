@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:deepflect_app/widgets/file/history/filter_button.dart';
 import 'package:deepflect_app/services/file_service.dart';
-import 'package:deepflect_app/pages/file/upload/file_preview_page.dart';
 
 class FileHistoryPage extends StatefulWidget {
   final GlobalKey<FileHistoryPageState>? stateKey;
@@ -17,7 +16,7 @@ class FileHistoryPageState extends State<FileHistoryPage> {
   final FileService _fileService = FileService();
   int selectedTab = 0;
   final List<String> tabs = ['ALL', '사진', '동영상'];
-  List<Map<String, dynamic>> files = []; // 업로드된 파일 리스트
+  List<Map<String, dynamic>> files = [];
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -27,7 +26,6 @@ class FileHistoryPageState extends State<FileHistoryPage> {
     _loadFiles();
   }
 
-  // 외부에서 호출 가능한 새로고침 메서드
   void refresh() {
     _loadFiles();
   }
@@ -64,9 +62,9 @@ class FileHistoryPageState extends State<FileHistoryPage> {
     }
   }
 
-  Future<void> _deleteFile(String fileId, int index) async {
+  Future<void> _deleteFile(String taskId, int index) async {
     try {
-      await _fileService.deleteFile(fileId);
+      await _fileService.deleteFile(taskId);
       if (mounted) {
         setState(() {
           files.removeAt(index);
@@ -90,8 +88,8 @@ class FileHistoryPageState extends State<FileHistoryPage> {
     }
   }
 
-  Future<void> _downloadFile(String fileId, String fileName) async {
-    if (fileId.isEmpty) {
+  Future<void> _downloadFile(String taskId, String fileName) async {
+    if (taskId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('다운로드할 수 없는 파일입니다.'),
@@ -109,7 +107,7 @@ class FileHistoryPageState extends State<FileHistoryPage> {
         ),
       );
 
-      final savedPath = await _fileService.downloadFile(fileId, fileName);
+      final savedPath = await _fileService.downloadFile(taskId, fileName);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -131,16 +129,6 @@ class FileHistoryPageState extends State<FileHistoryPage> {
         );
       }
     }
-  }
-
-  String _getFileType(String fileName) {
-    final extension = fileName.toLowerCase().split('.').last;
-    if (extension == 'mp4' || extension == 'mp3') {
-      return 'video';
-    } else if (extension == 'jpg' || extension == 'jpeg' || extension == 'png') {
-      return 'image';
-    }
-    return 'image'; // 기본값
   }
 
   @override
@@ -261,9 +249,8 @@ class FileHistoryPageState extends State<FileHistoryPage> {
                               itemCount: files.length,
                               itemBuilder: (context, index) {
                                 final file = files[index];
-                                final fileId = file['fileId']?.toString() ?? '';
+                                final taskId = file['taskId']?.toString() ?? '';
                                 final fileName = file['fileName']?.toString() ?? file['name']?.toString() ?? 'unknown';
-                                final fileType = _getFileType(fileName);
                                 final previewUrl = file['previewUrl']?.toString();
                                 
                                 final colors = [
@@ -278,45 +265,9 @@ class FileHistoryPageState extends State<FileHistoryPage> {
                                 final color = colors[index % colors.length];
                                 
                                 return GestureDetector(
+                                  // 사진/동영상 모두 탭 시 바로 다운로드
                                   onTap: () async {
-                                    // 동영상은 미리보기 제공 안 하므로 바로 다운로드
-                                    if (fileType == 'video') {
-                                      _downloadFile(fileId, fileName);
-                                      return;
-                                    }
-
-                                    // 이미지는 미리보기로 이동
-                                    String finalPreviewUrl = previewUrl ?? '';
-                                    
-                                    // previewUrl이 없으면 getPreview API 호출
-                                    if (finalPreviewUrl.isEmpty && fileId.isNotEmpty) {
-                                      try {
-                                        final previewData = await _fileService.getPreview(fileId);
-                                        finalPreviewUrl = previewData['previewUrl']?.toString() ?? 
-                                                         previewData['url']?.toString() ?? '';
-                                      } catch (e) {
-                                        if (mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(
-                                              content: Text('미리보기 로드 실패: ${e.toString().replaceAll('Exception: ', '')}'),
-                                              backgroundColor: Colors.orange,
-                                            ),
-                                          );
-                                        }
-                                      }
-                                    }
-                                    
-                                    if (mounted) {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => FilePreviewPage(
-                                            fileName: fileName,
-                                            filePath: finalPreviewUrl,
-                                          ),
-                                        ),
-                                      );
-                                    }
+                                    _downloadFile(taskId, fileName);
                                   },
                                   onLongPress: () {
                                     showDialog(
@@ -337,7 +288,7 @@ class FileHistoryPageState extends State<FileHistoryPage> {
                                               ),
                                               onTap: () {
                                                 Navigator.pop(context);
-                                                _downloadFile(fileId, fileName);
+                                                _downloadFile(taskId, fileName);
                                               },
                                             ),
                                             ListTile(
@@ -350,7 +301,7 @@ class FileHistoryPageState extends State<FileHistoryPage> {
                                               ),
                                               onTap: () {
                                                 Navigator.pop(context);
-                                                _deleteFile(fileId, index);
+                                                _deleteFile(taskId, index);
                                               },
                                             ),
                                           ],
@@ -379,10 +330,10 @@ class FileHistoryPageState extends State<FileHistoryPage> {
                                               previewUrl,
                                               fit: BoxFit.cover,
                                               errorBuilder: (context, error, stackTrace) {
-                                                return _buildPlaceholder(fileType, fileName, color);
+                                                return _buildPlaceholder(fileName, color);
                                               },
                                             )
-                                          : _buildPlaceholder(fileType, fileName, color),
+                                          : _buildPlaceholder(fileName, color),
                                     ),
                                   ),
                                 );
@@ -395,16 +346,16 @@ class FileHistoryPageState extends State<FileHistoryPage> {
     );
   }
 
-  Widget _buildPlaceholder(String fileType, String fileName, Color color) {
+  Widget _buildPlaceholder(String fileName, Color color) {
     return Container(
       color: color,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            fileType == 'video' ? Icons.videocam : Icons.image,
+          const Icon(
+            Icons.image,
             size: 50,
-            color: Colors.grey[700],
+            color: Colors.black54,
           ),
           const SizedBox(height: 8),
           Text(
