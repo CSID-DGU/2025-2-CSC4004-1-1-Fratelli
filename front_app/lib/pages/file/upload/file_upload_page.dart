@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:file_picker/file_picker.dart';
@@ -18,6 +19,7 @@ class FileUploadPage extends StatefulWidget {
 class _FileUploadPageState extends State<FileUploadPage> {
   final FileService _fileService = FileService();
   List<Map<String, dynamic>> files = [];
+  Timer? _uploadPollTimer;
 
   String _determineFileType(String fileName) {
     final extension = fileName.toLowerCase().split('.').last;
@@ -33,6 +35,17 @@ class _FileUploadPageState extends State<FileUploadPage> {
   void initState() {
     super.initState();
     _loadUploadingFiles();
+    // 주기적으로 서버 상태를 가져와 업로드 진행률/완료 상태를 갱신
+    _uploadPollTimer = Timer.periodic(
+      const Duration(seconds: 3),
+      (_) => _loadUploadingFiles(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _uploadPollTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadUploadingFiles() async {
@@ -42,20 +55,92 @@ class _FileUploadPageState extends State<FileUploadPage> {
       if (!mounted) return;
 
       setState(() {
-        for (final item in uploads) {
+        // 서버에서 온 업로드 목록을 FileUploadPage의 files 형태로 매핑
+        final List<Map<String, dynamic>> serverFiles = uploads.map((item) {
           final formattedSize = _formatFileSize(item['size']);
-          files.add({
+          final rawStatus = item['status']?.toString() ?? 'uploading';
+
+          // 서버 progress(0~100)를 0.0~1.0 으로 변환
+          double progress = 0.0;
+          if (item['progress'] is num) {
+            progress = (item['progress'] as num).clamp(0, 100) / 100.0;
+          } else if (rawStatus == 'success') {
+            progress = 1.0;
+          }
+
+          // FileUploadPage에서 사용하는 상태 문자열로 매핑
+          final String mappedStatus;
+          if (rawStatus == 'success') {
+            mappedStatus = 'done';
+          } else if (rawStatus == 'failed') {
+            mappedStatus = 'error';
+          } else {
+            mappedStatus = 'uploading';
+          }
+
+          return {
+            "id": item['taskId']?.toString() ?? '',
             "name": item['fileName']?.toString() ?? '',
             "size": formattedSize,
-            "progress": (item['progress'] is num)
-                ? (item['progress'] as num).clamp(0, 100) / 100.0
-                : 0.0,
-            "status": item['status']?.toString() ?? 'uploading',
+            "progress": progress,
+            "status": mappedStatus,
             "file": null,
             "fileType": item['fileType']?.toString() ?? 'image',
             "taskId": item['taskId']?.toString(),
-          });
-        }
+          };
+        }).toList();
+
+        // taskId 기준으로 서버 파일들을 맵으로 구성
+        final Map<String, Map<String, dynamic>> serverByTaskId = {
+          for (final f in serverFiles)
+            if ((f["taskId"] ?? '').toString().isNotEmpty)
+              f["taskId"]!.toString(): f,
+        };
+
+        // 1) 기존 files 업데이트
+        final List<Map<String, dynamic>> updated = files.map((local) {
+          final localTaskId = local["taskId"]?.toString();
+
+          // 아직 서버에 등록되지 않은 로컬 파일(업로드 시작 직후 등)은 그대로 유지
+          if (localTaskId == null || localTaskId.isEmpty) {
+            return local;
+          }
+
+          final serverFile = serverByTaskId[localTaskId];
+
+          // 서버 목록에 더 이상 없고, 로컬 상태가 uploading 이면 -> 완료로 간주
+          if (serverFile == null && local["status"] == "uploading") {
+            return {
+              ...local,
+              "status": "done",
+              "progress": 1.0,
+            };
+          }
+
+          // 서버 정보가 있으면 서버 상태/진행률로 덮어쓰기
+          if (serverFile != null) {
+            return {
+              ...local,
+              "status": serverFile["status"],
+              "progress": serverFile["progress"],
+            };
+          }
+
+          return local;
+        }).toList();
+
+        // 2) 기존에 없던 서버 파일들 추가
+        final existingTaskIds = updated
+            .map((f) => f["taskId"]?.toString())
+            .whereType<String>()
+            .toSet();
+
+        final List<Map<String, dynamic>> additional = serverFiles.where((f) {
+          final tid = f["taskId"]?.toString();
+          return tid != null && tid.isNotEmpty && !existingTaskIds.contains(tid);
+        }).toList();
+
+        files = [...updated, ...additional];
       });
     } catch (e) {
       if (!mounted) return;
