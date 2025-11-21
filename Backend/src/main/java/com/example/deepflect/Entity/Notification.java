@@ -27,6 +27,7 @@ public class Notification {
     private Status status;     // success / fail
     private String fileName;
     private FileType fileType;   // video / audio
+    @Column(length = 1000)
     private String message;
 
     private Timestamp timestamp;
