@@ -15,12 +15,10 @@ const FileUploadButton = ({ onFilesSelected }: FileUploadButtonProps) => {
 
     const files = event.target.files
     if (files && files.length > 0 && onFilesSelected) {
-      // FileList를 File 배열로 변환
       const fileArray = Array.from(files)
       onFilesSelected(fileArray)
     }
 
-    // input 초기화 (같은 파일을 다시 선택할 수 있도록)
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
     }
@@ -32,12 +30,10 @@ const FileUploadButton = ({ onFilesSelected }: FileUploadButtonProps) => {
     fileInputRef.current?.click()
   }
 
-  // 사이드 패널의 부모 컨테이너 너비에서 양쪽 여백(7px * 2)을 뺀 크기
   const horizontalPadding = 7.0
 
   return (
     <>
-      {/* 숨겨진 파일 입력 */}
       <input
         ref={fileInputRef}
         type="file"
@@ -47,7 +43,6 @@ const FileUploadButton = ({ onFilesSelected }: FileUploadButtonProps) => {
         style={{ display: "none" }}
       />
 
-      {/* 업로드 버튼 */}
       <div
         onClick={handleButtonClick}
         style={{
@@ -65,7 +60,6 @@ const FileUploadButton = ({ onFilesSelected }: FileUploadButtonProps) => {
           justifyContent: "center",
           gap: 14
         }}>
-        {/* 아이콘 또는 로딩 표시 */}
         {isLoading ? (
           <div
             style={{
@@ -86,7 +80,6 @@ const FileUploadButton = ({ onFilesSelected }: FileUploadButtonProps) => {
           />
         )}
 
-        {/* 제목 */}
         <span
           style={{
             color: "rgba(39, 0, 93, 1)",
@@ -99,7 +92,6 @@ const FileUploadButton = ({ onFilesSelected }: FileUploadButtonProps) => {
           Select File to Upload
         </span>
 
-        {/* 설명 */}
         <span
           style={{
             color: "rgba(39, 0, 93, 0.41)",
@@ -113,7 +105,6 @@ const FileUploadButton = ({ onFilesSelected }: FileUploadButtonProps) => {
         </span>
       </div>
 
-      {/* 로딩 애니메이션 스타일 */}
       <style>
         {`
           @keyframes spin {

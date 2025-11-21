@@ -36,10 +36,8 @@ const UploadProgressButton = ({
   onDownload,
   onDelete
 }: UploadProgressButtonProps) => {
-  // 사이드 패널의 부모 컨테이너 너비에서 양쪽 여백(7px * 2)을 뺀 크기
   const horizontalPadding = 7.0
 
-  // 왼쪽 아이콘: 파일 타입
   const getLeftIcon = () => {
     switch (type) {
       case UploadType.image:
@@ -51,7 +49,6 @@ const UploadProgressButton = ({
     }
   }
 
-  // 업로드 중일 때만 위로 이동
   const isUploading = status === UploadStatus.uploading
   const iconTop = isUploading ? 12 : 18
   const fileNameTop = isUploading ? 13 : 19
@@ -69,7 +66,6 @@ const UploadProgressButton = ({
         boxShadow: "0px 3px 6px rgba(0, 0, 0, 0.05)",
         position: "relative"
       }}>
-      {/* 왼쪽 아이콘 */}
       <div
         style={{
           position: "absolute",
@@ -85,7 +81,6 @@ const UploadProgressButton = ({
         {getLeftIcon()}
       </div>
 
-      {/* 파일 이름 */}
       <div
         style={{
           position: "absolute",
@@ -104,7 +99,6 @@ const UploadProgressButton = ({
         {fileName}
       </div>
 
-      {/* 파일 크기 */}
       <div
         style={{
           position: "absolute",
@@ -119,12 +113,11 @@ const UploadProgressButton = ({
         {fileSize}
       </div>
 
-      {/* 오른쪽 퍼센트 (업로드 중일 때만) */}
       {status === UploadStatus.uploading && (
         <div
           style={{
             position: "absolute",
-            right: 14,
+            right: 34,
             top: 16,
             color: "rgba(29, 5, 35, 1)",
             fontSize: 10,
@@ -135,13 +128,12 @@ const UploadProgressButton = ({
         </div>
       )}
 
-      {/* 오른쪽 아이콘 버튼 */}
-      {status === UploadStatus.done && (
+      {(status === UploadStatus.done || status === UploadStatus.uploading) && (
         <div
           style={{
             position: "absolute",
             right: 10,
-            top: isUploading ? 16 : 19,
+            top: isUploading ? 14 : 17,
             display: "flex",
             gap: 0,
             alignItems: "center",
@@ -165,14 +157,14 @@ const UploadProgressButton = ({
               <GoX
                 style={{
                   fontSize: 18,
-                  color: "rgba(162, 162, 162, 1)",
+                  color: "#000000", 
                   width: 18,
                   height: 18
                 }}
               />
             </button>
           )}
-          {onDownload && (
+          {status === UploadStatus.done && onDownload && (
             <button
               onClick={onDownload}
               style={{
@@ -223,7 +215,6 @@ const UploadProgressButton = ({
         </button>
       )}
 
-      {/* 업로드 진행 바 (진행 중일 때만) */}
       {status === UploadStatus.uploading && (
         <div
           style={{

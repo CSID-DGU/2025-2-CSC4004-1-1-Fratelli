@@ -5,7 +5,7 @@ interface FilterButtonProps {
 }
 
 const FilterButton = ({ title, onTap, isSelected }: FilterButtonProps) => {
-  const borderColor = "rgba(39, 0, 93, 1)" // #27005D
+  const borderColor = "rgba(39, 0, 93, 1)"
 
   return (
     <div
