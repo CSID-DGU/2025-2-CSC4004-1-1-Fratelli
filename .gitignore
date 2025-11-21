@@ -15,3 +15,15 @@ __pycache__/
 # Virtual environment
 venv/
 env/
+
+# Temp folders
+temp/
+AI/temp/
+**/temp/uploads/
+**/temp/outputs/
+
+# Large model files
+**/models/*.ckpt
+submit/models/
+AI/deepfake/models/
+Backend/uploadedFiles/
