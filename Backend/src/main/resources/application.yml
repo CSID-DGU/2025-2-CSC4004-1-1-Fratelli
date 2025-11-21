@@ -21,7 +21,8 @@ jwt:
 #jwt:
 #  # JWT 비밀 키는 32자 이상의 길고 복잡한 문자열을 사용해야 보안에 안전합니다.
 file:
-  dir: C:/Users/betty/OSS_team1/uploadedFiles
+  dir: ${user.dir}/uploadedFiles
+  output_dir: ${user.dir}/../AI/temp/outputs
 
 ai:
   server:
