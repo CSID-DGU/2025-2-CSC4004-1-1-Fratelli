@@ -1,0 +1,29 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/deepflect
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+  servlet:
+    multipart:
+      max-file-size: 2000MB
+      max-request-size: 2000MB
+
+jwt:
+  secret-key: testtesttesttesttesttesttesttesttesttesttesttesttesttest
+
+#jwt:
+#  # JWT 비밀 키는 32자 이상의 길고 복잡한 문자열을 사용해야 보안에 안전합니다.
+file:
+  dir: ${user.dir}/uploadedFiles
+  output_dir: ${user.dir}/../AI/temp/outputs
+
+ai:
+  server:
+    url: http://localhost:8000
