@@ -21,6 +21,10 @@ from deepvoice.protect_audio import protect_audio
 from deepvoice.merge_video import merge_video
 from config import UPLOAD_FOLDER, OUTPUT_FOLDER
 
+# 딥페이크 방어 모듈
+sys.path.append(os.path.join(os.path.dirname(__file__), 'deepfake'))
+from deepfake.defend_stargan import defend_image, defend_video
+
 # 로깅 설정
 logging.basicConfig(
     level=logging.INFO,
@@ -78,7 +82,7 @@ def init_protector():
 async def startup_event():
     """앱 시작 시 실행"""
     logger.info("=" * 60)
-    logger.info("AI Video Protection Server 시작")
+    logger.info("AI Image/Video Protection Server 시작")
     logger.info("=" * 60)
     logger.info(f"Upload folder: {UPLOAD_FOLDER}")
     logger.info(f"Output folder: {OUTPUT_FOLDER}")
@@ -157,6 +161,116 @@ async def health():
 class ProcessingStopped(Exception):
     """사용자가 업로드 파일을 삭제하면 처리 중단"""
     pass
+
+def _background_image_processing(task_id: str, image_path: str):
+    """
+    백그라운드에서 이미지 처리:
+    1. defend_stargan으로 이미지 보호
+    """
+    print(f"[{task_id}] Background image processing started for {image_path}")
+    
+    try:
+        # 취소 확인
+        if task_id in cancelled_tasks:
+            raise ProcessingStopped(f"[{task_id}] Task was cancelled")
+        
+        # 파일 존재 확인
+        if not os.path.exists(image_path):
+            raise ProcessingStopped(f"[{task_id}] Uploaded file was deleted: {image_path}")
+        
+        # 진행률 0%
+        try:
+            requests.post(
+                'http://localhost:8080/api/v1/callback/ai_progress',
+                json={'taskId': task_id, 'progress': 0},
+                timeout=2
+            )
+        except Exception:
+            pass
+        
+        # 이미지 보호 (defend_stargan)
+        print(f"[{task_id}] Step 1: Protecting image with defend_stargan...")
+        
+        if task_id in cancelled_tasks:
+            raise ProcessingStopped(f"[{task_id}] Task cancelled before image protection")
+        
+        # 출력 파일 경로 결정 (확장자 유지)
+        ext = os.path.splitext(image_path)[1].lower()
+        if ext not in ['.png', '.jpg', '.jpeg']:
+            ext = '.png'
+        output_image = os.path.join(OUTPUT_FOLDER, f"{task_id}_protected{ext}")
+        
+        # 체크포인트 경로
+        ckpt_path = os.path.join(os.path.dirname(__file__), 'deepfake', 'models', '30000-PG-005.ckpt')
+        if not os.path.exists(ckpt_path):
+            raise Exception(f"Checkpoint file not found: {ckpt_path}")
+        
+        # defend_image 호출
+        defend_image(
+            input_path=image_path,
+            output_path=output_image,
+            ckpt_path=ckpt_path,
+            eps=0.10,
+            image_size=128,
+            device="cuda"
+        )
+        print(f"[{task_id}] Image protected: {output_image}")
+        
+        # 진행률 100%
+        try:
+            requests.post(
+                'http://localhost:8080/api/v1/callback/ai_progress',
+                json={'taskId': task_id, 'progress': 100},
+                timeout=2
+            )
+        except Exception:
+            pass
+        
+        # 완료 콜백
+        try:
+            requests.post(
+                'http://localhost:8080/api/v1/callback/ai_finished',
+                json={
+                    'taskId': task_id,
+                    'progress': 100,
+                    'downloadUrl': f'http://localhost:8080/api/v1/files/download-protected/{task_id}'
+                },
+                timeout=2
+            )
+            print(f"[{task_id}] Finished callback sent")
+        except Exception as e:
+            print(f"[{task_id}] Failed to send finished callback: {e}")
+    
+    except ProcessingStopped as ps:
+        print(ps)
+        try:
+            requests.post(
+                'http://localhost:8080/api/v1/callback/ai_failed',
+                json={'taskId': task_id, 'message': str(ps)},
+                timeout=2
+            )
+        except Exception:
+            pass
+    
+    except Exception as e:
+        print(f"[{task_id}] Error in image processing: {e}")
+        print(traceback.format_exc())
+        try:
+            requests.post(
+                'http://localhost:8080/api/v1/callback/ai_failed',
+                json={'taskId': task_id, 'message': str(e)},
+                timeout=2
+            )
+        except Exception:
+            pass
+    
+    finally:
+        if task_id in cancelled_tasks:
+            cancelled_tasks.discard(task_id)
+            logger.info(f"[{task_id}] Removed from cancelled tasks")
+    
+    print(f"[{task_id}] Background image processing completed")
+
 
 def _background_video_processing(task_id: str, video_path: str):
     """
@@ -239,20 +353,57 @@ def _background_video_processing(task_id: str, video_path: str):
         except Exception:
             pass
 
-        # 3. 비디오와 보호된 오디오 병합
-        print(f"[{task_id}] Step 3: Merging video and audio...")
+        # 3. 비디오 딥페이크 방어 (defend_stargan)
+        print(f"[{task_id}] Step 3: Protecting video with defend_stargan...")
         
         # 취소 확인
         if task_id in cancelled_tasks:
-            raise ProcessingStopped(f"[{task_id}] Task cancelled before video merge")
+            raise ProcessingStopped(f"[{task_id}] Task cancelled before video deepfake defense")
+        
+        # 체크포인트 경로
+        ckpt_path = os.path.join(os.path.dirname(__file__), 'deepfake', 'models', '30000-PG-005.ckpt')
+        if not os.path.exists(ckpt_path):
+            raise Exception(f"Checkpoint file not found: {ckpt_path}")
+        
+        # 임시 방어된 비디오 경로
+        defended_video = os.path.join(UPLOAD_FOLDER, f"{task_id}_defended.mp4")
+        
+        # defend_video 호출
+        defend_video(
+            input_path=video_path,
+            output_path=defended_video,
+            ckpt_path=ckpt_path,
+            eps=0.10,
+            image_size=128,
+            blend_alpha=0.6,
+            device="cuda"
+        )
+        print(f"[{task_id}] Video defended: {defended_video}")
+        
+        # 진행률 80%
+        try:
+            requests.post(
+                'http://localhost:8080/api/v1/callback/ai_progress',
+                json={'taskId': task_id, 'progress': 80},
+                timeout=2
+            )
+        except Exception:
+            pass
+        
+        # 4. 방어된 비디오와 보호된 오디오 병합
+        print(f"[{task_id}] Step 4: Merging defended video and protected audio...")
+        
+        # 취소 확인
+        if task_id in cancelled_tasks:
+            raise ProcessingStopped(f"[{task_id}] Task cancelled before final merge")
         
         output_video = os.path.join(OUTPUT_FOLDER, f"{task_id}_protected.mp4")
 
-        if not os.path.exists(video_path) or not os.path.exists(protected_audio):
-            raise ProcessingStopped(f"[{task_id}] Input or protected audio missing before merge")
+        if not os.path.exists(defended_video) or not os.path.exists(protected_audio):
+            raise ProcessingStopped(f"[{task_id}] Defended video or protected audio missing before merge")
         
-        merge_video(video_path, protected_audio, output_video)
-        print(f"[{task_id}] Video merged: {output_video}")
+        merge_video(defended_video, protected_audio, output_video)
+        print(f"[{task_id}] Final video merged: {output_video}")
 
         # 진행률 100%
         try:
@@ -361,17 +512,21 @@ async def process_file(
         
         logger.info(f"[{task_id}] File type: {fileType}")
         
-        # 파일 타입에 따라 처리 (현재는 비디오만 지원)
+        # 파일 타입에 따라 처리
         if fileType == 'video':
-            # 백그라운드 작업 추가
+            # 백그라운드 비디오 처리 (딥보이스 + 딥페이크)
             background_tasks.add_task(_background_video_processing, task_id, saved_path)
             logger.info(f"[{task_id}] Background video processing scheduled")
+        elif fileType == 'image':
+            # 백그라운드 이미지 처리 (딥페이크만)
+            background_tasks.add_task(_background_image_processing, task_id, saved_path)
+            logger.info(f"[{task_id}] Background image processing scheduled")
         else:
-            # 이미지/오디오는 아직 미지원
+            # 오디오는 아직 미지원
             logger.warning(f"[{task_id}] Unsupported file type: {fileType}")
             raise HTTPException(
                 status_code=400,
-                detail=f"File type '{fileType}' is not supported yet. Only video files are supported."
+                detail=f"File type '{fileType}' is not supported yet. Only video and image files are supported."
             )
         
         return {
