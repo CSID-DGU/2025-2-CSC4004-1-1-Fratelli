@@ -107,35 +107,43 @@ class UploadProgressButton extends StatelessWidget {
             ),
           ),
 
-          // 파일명
+          // 파일명 + 파일 크기 (한 줄, 말줄임 처리)
           Positioned(
             left: 52,
+            right: 70, // 오른쪽 아이콘/퍼센트 영역 여유
             top: status == UploadStatus.uploading ? 15 : 22,
-            child: Text(
-              fileName,
-              style: const TextStyle(
-                color: Color(0xFF1D0523),
-                fontSize: 13,
-                fontFamily: 'K2D',
-                fontWeight: FontWeight.w500,
-                height: 1.69,
-              ),
-            ),
-          ),
-
-          // 파일 크기
-          Positioned(
-            left: 300,
-            top: status == UploadStatus.uploading ? 17 : 24,
-            child: Text(
-              fileSize,
-              style: const TextStyle(
-                color: Color(0xFFA2A2A2),
-                fontSize: 10,
-                fontFamily: 'K2D',
-                fontWeight: FontWeight.w500,
-                height: 2.20,
-              ),
+            child: Row(
+              children: [
+                // 파일명은 남는 공간을 차지하고, 너무 길면 말줄임
+                Expanded(
+                  child: Text(
+                    fileName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFF1D0523),
+                      fontSize: 13,
+                      fontFamily: 'K2D',
+                      fontWeight: FontWeight.w500,
+                      height: 1.69,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                // 파일 크기 (짧은 텍스트)
+                Text(
+                  fileSize,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFFA2A2A2),
+                    fontSize: 10,
+                    fontFamily: 'K2D',
+                    fontWeight: FontWeight.w500,
+                    height: 2.20,
+                  ),
+                ),
+              ],
             ),
           ),
 

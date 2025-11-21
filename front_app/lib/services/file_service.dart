@@ -49,9 +49,24 @@ class FileService {
         // }
         if (responseData is Map<String, dynamic>) {
           return responseData;
-        } else {
-          throw Exception('서버 응답 형식이 올바르지 않습니다.');
         }
+
+        // 서버가 200/201 이고 body에 UUID 문자열만 내려주는 경우
+        if (responseData is String && responseData.trim().isNotEmpty) {
+          final taskId = responseData.trim();
+          return {
+            'taskId': taskId,
+            'fileName': fileName,
+            'fileType': type,
+            'status': 'uploading',
+          };
+        }
+
+        // 그 외(JSON 바디가 없거나 예기치 못한 형식)
+        return {
+          'success': true,
+          'rawResponse': responseData,
+        };
       } else {
         throw Exception('파일 업로드 실패: ${response.statusMessage}');
       }

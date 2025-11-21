@@ -76,81 +76,146 @@ class ApiService {
     ));
   }
 
-  // Bearer 토큰 포함 요청
-  Future<Response> getWithAuth(String endpoint) async {
+  /// 401/403 등 인증 오류 시 refresh 토큰으로 재발급을 시도하고,
+  /// 성공하면 원래 요청을 한 번만 재시도하는 공통 로직
+  Future<Response> _requestWithAutoRefresh(
+    Future<Response> Function(String accessToken) requestFn, {
+    bool retryOnAuthFail = true,
+  }) async {
     final accessToken = await TokenStorage.getAccessToken();
     if (accessToken == null) {
       throw Exception('액세스 토큰이 없습니다. 로그인이 필요합니다.');
     }
 
     try {
-      final response = await _dio.get(
+      final response = await requestFn(accessToken);
+
+      // 401/403 이 아닌 경우 그대로 반환
+      if (response.statusCode != 401 && response.statusCode != 403) {
+        return response;
+      }
+
+      // 여기까지 왔으면 인증 오류
+      if (!retryOnAuthFail) {
+        // 이미 한 번 재시도한 후라면 더 이상 재시도하지 않음
+        await TokenStorage.deleteTokens();
+        throw Exception('접근 권한이 없습니다. 토큰이 만료되었을 수 있습니다. 다시 로그인해주세요.');
+      }
+    } on DioException catch (e) {
+      // 네트워크 에러인데 401/403 인 경우에만 refresh 시도
+      final statusCode = e.response?.statusCode;
+      if (statusCode != 401 && statusCode != 403) {
+        throw Exception('네트워크 오류가 발생했습니다: ${e.message}');
+      }
+      if (!retryOnAuthFail) {
+        await TokenStorage.deleteTokens();
+        throw Exception('접근 권한이 없습니다. 토큰이 만료되었을 수 있습니다. 다시 로그인해주세요.');
+      }
+    }
+
+    // 여기서부터는 access 토큰 만료로 보고 refresh 토큰 사용
+    final refreshToken = await TokenStorage.getRefreshToken();
+    if (refreshToken == null) {
+      await TokenStorage.deleteTokens();
+      throw Exception('리프레시 토큰이 없습니다. 다시 로그인해주세요.');
+    }
+
+    try {
+      print('리프레시 토큰으로 액세스 토큰 재발급 시도');
+      final refreshResponse = await _dio.post(
+        '/api/v1/auth/refresh',
+        data: {
+          'refreshToken': refreshToken,
+        },
+      );
+
+      print('리프레시 응답 상태 코드: ${refreshResponse.statusCode}');
+      print('리프레시 응답 데이터: ${refreshResponse.data}');
+
+      if (refreshResponse.statusCode != 200 ||
+          refreshResponse.data is! Map<String, dynamic>) {
+        throw Exception('토큰 재발급 실패: ${refreshResponse.statusMessage}');
+      }
+
+      final Map<String, dynamic> body =
+          refreshResponse.data as Map<String, dynamic>;
+      final newAccessToken = body['accessToken']?.toString();
+      final newRefreshToken = body['refreshToken']?.toString();
+
+      if (newAccessToken == null || newRefreshToken == null) {
+        throw Exception('토큰 재발급 응답에 토큰 정보가 없습니다.');
+      }
+
+      // 새 토큰 저장
+      await TokenStorage.saveTokens(
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+      );
+
+      // 새 토큰으로 원래 요청 한 번만 재시도
+      final retryResponse =
+          await _requestWithAutoRefresh(requestFn, retryOnAuthFail: false);
+      return retryResponse;
+    } on DioException catch (e) {
+      print('DioException 발생(리프레시): ${e.type}');
+      print('에러 메시지: ${e.message}');
+      print('응답 데이터: ${e.response?.data}');
+      print('상태 코드: ${e.response?.statusCode}');
+
+      if (e.response?.statusCode == 401) {
+        await TokenStorage.deleteTokens();
+        throw Exception('리프레시 토큰이 유효하지 않습니다. 다시 로그인해주세요.');
+      }
+      throw Exception('네트워크 오류가 발생했습니다: ${e.message}');
+    }
+  }
+  
+  // Bearer 토큰 포함 요청
+  Future<Response> getWithAuth(String endpoint) async {
+    return _requestWithAutoRefresh(
+      (accessToken) => _dio.get(
         endpoint,
         options: Options(
           headers: {
             'Authorization': 'Bearer $accessToken',
           },
         ),
-      );
-      
-      if (response.statusCode == 403) {
-        throw Exception('접근 권한이 없습니다. 토큰이 만료되었을 수 있습니다.');
-      }
-      
-      return response;
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 403) {
-        throw Exception('접근 권한이 없습니다. 토큰이 만료되었을 수 있습니다.');
-      }
-      throw Exception('네트워크 오류가 발생했습니다: ${e.message}');
-    }
+      ),
+    );
   }
 
   Future<Response> postWithAuth(String endpoint, {dynamic data, bool isMultipart = false}) async {
-    final accessToken = await TokenStorage.getAccessToken();
-    if (accessToken == null) {
-      throw Exception('액세스 토큰이 없습니다. 로그인이 필요합니다.');
-    }
+    return _requestWithAutoRefresh(
+      (accessToken) {
+        final headers = <String, dynamic>{
+          'Authorization': 'Bearer $accessToken',
+        };
 
-    try {
-      final headers = <String, dynamic>{
-        'Authorization': 'Bearer $accessToken',
-      };
-      
-      // multipart/form-data인 경우
-      if (!isMultipart) {
-        headers['Content-Type'] = 'application/json';
-      }
+        // multipart/form-data 인 경우 서버가 JSON이 아닌 응답(빈 바디, 텍스트 등)을 줄 수 있으므로
+        // JSON 파싱 오류(FormatException) 방지를 위해 responseType을 적절히 설정
+        if (!isMultipart) {
+          headers['Content-Type'] = 'application/json';
+        }
 
-      final response = await _dio.post(
-        endpoint,
-        data: data,
-        options: Options(
-          headers: headers,
-        ),
-      );
-      
-      if (response.statusCode == 403) {
-        throw Exception('접근 권한이 없습니다. 토큰이 만료되었을 수 있습니다.');
-      }
-      
-      return response;
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 403) {
-        throw Exception('접근 권한이 없습니다. 토큰이 만료되었을 수 있습니다.');
-      }
-      throw Exception('네트워크 오류가 발생했습니다: ${e.message}');
-    }
+        return _dio.post(
+          endpoint,
+          data: data,
+          options: Options(
+            headers: headers,
+            responseType: isMultipart ? ResponseType.plain : ResponseType.json,
+            validateStatus: (status) {
+              // 500 이상만 에러로 취급 (나머지는 클라이언트에서 분기)
+              return status != null && status < 500;
+            },
+          ),
+        );
+      },
+    );
   }
 
   Future<Response> putWithAuth(String endpoint, {dynamic data}) async {
-    final accessToken = await TokenStorage.getAccessToken();
-    if (accessToken == null) {
-      throw Exception('액세스 토큰이 없습니다. 로그인이 필요합니다.');
-    }
-
-    try {
-      final response = await _dio.put(
+    return _requestWithAutoRefresh(
+      (accessToken) => _dio.put(
         endpoint,
         data: data,
         options: Options(
@@ -158,29 +223,13 @@ class ApiService {
             'Authorization': 'Bearer $accessToken',
           },
         ),
-      );
-      
-      if (response.statusCode == 403) {
-        throw Exception('접근 권한이 없습니다. 토큰이 만료되었을 수 있습니다.');
-      }
-      
-      return response;
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 403) {
-        throw Exception('접근 권한이 없습니다. 토큰이 만료되었을 수 있습니다.');
-      }
-      throw Exception('네트워크 오류가 발생했습니다: ${e.message}');
-    }
+      ),
+    );
   }
 
   Future<Response> patchWithAuth(String endpoint, {dynamic data}) async {
-    final accessToken = await TokenStorage.getAccessToken();
-    if (accessToken == null) {
-      throw Exception('액세스 토큰이 없습니다. 로그인이 필요합니다.');
-    }
-
-    try {
-      final response = await _dio.patch(
+    return _requestWithAutoRefresh(
+      (accessToken) => _dio.patch(
         endpoint,
         data: data,
         options: Options(
@@ -188,29 +237,13 @@ class ApiService {
             'Authorization': 'Bearer $accessToken',
           },
         ),
-      );
-      
-      if (response.statusCode == 403) {
-        throw Exception('접근 권한이 없습니다. 토큰이 만료되었을 수 있습니다.');
-      }
-      
-      return response;
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 403) {
-        throw Exception('접근 권한이 없습니다. 토큰이 만료되었을 수 있습니다.');
-      }
-      throw Exception('네트워크 오류가 발생했습니다: ${e.message}');
-    }
+      ),
+    );
   }
 
   Future<Response> deleteWithAuth(String endpoint, {dynamic data}) async {
-    final accessToken = await TokenStorage.getAccessToken();
-    if (accessToken == null) {
-      throw Exception('액세스 토큰이 없습니다. 로그인이 필요합니다.');
-    }
-
-    try {
-      final response = await _dio.delete(
+    return _requestWithAutoRefresh(
+      (accessToken) => _dio.delete(
         endpoint,
         data: data,
         options: Options(
@@ -218,19 +251,8 @@ class ApiService {
             'Authorization': 'Bearer $accessToken',
           },
         ),
-      );
-      
-      if (response.statusCode == 403) {
-        throw Exception('접근 권한이 없습니다. 토큰이 만료되었을 수 있습니다.');
-      }
-      
-      return response;
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 403) {
-        throw Exception('접근 권한이 없습니다. 토큰이 만료되었을 수 있습니다.');
-      }
-      throw Exception('네트워크 오류가 발생했습니다: ${e.message}');
-    }
+      ),
+    );
   }
 
   // 토큰 없이 요청
