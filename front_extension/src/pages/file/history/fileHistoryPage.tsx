@@ -175,14 +175,8 @@ const FileHistoryPage = ({
     )
   }
 
-  const colors = [
-    "rgba(144, 202, 249, 1)",
-    "rgba(165, 214, 167, 1)",
-    "rgba(255, 183, 77, 1)",
-    "rgba(206, 147, 216, 1)",
-    "rgba(239, 154, 154, 1)",
-    "rgba(128, 222, 234, 1)"
-  ]
+  // 히스토리 필터 버튼과 동일한 보라색 계열로 카드 배경 통일
+  const colors = ["rgba(39, 0, 93, 1)"]
 
   return (
     <div
@@ -361,9 +355,9 @@ const FileHistoryPage = ({
                             objectFit: "cover"
                           }}
                           muted
-                          loop
                           playsInline
                           preload="metadata"
+                          // 자동 재생 대신 첫 프레임만 썸네일처럼 표시
                           onError={() => handlePreviewError(index)}
                         />
                       ) : (
