@@ -21,5 +21,15 @@ public class FileUploadResponse {
     private FileType fileType; // "video", "image", "audio"
     private Status status; // UPLOADING, FAILED, SUCCESS
     private Timestamp timestamp; // ISO8601 timestamp string
+    private String userEmail; // 업로드한 사용자 이메일
 
+    // 기존 생성자 호환성을 위한 생성자
+    public FileUploadResponse(String taskId, String fileName, long size, FileType fileType, Status status, Timestamp timestamp) {
+        this.taskId = taskId;
+        this.fileName = fileName;
+        this.size = size;
+        this.fileType = fileType;
+        this.status = status;
+        this.timestamp = timestamp;
+    }
 }

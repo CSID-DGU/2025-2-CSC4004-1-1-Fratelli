@@ -40,6 +40,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/files/upload").permitAll()  // 개발용: 파일 업로드 인증 제외 (프로덕션에서는 제거)
                         .requestMatchers("/api/v1/files/uploads").permitAll()  // 개발용: 업로드 목록 조회 인증 제외
                         .requestMatchers("/api/v1/files").permitAll()  // 개발용: 파일 목록 조회 인증 제외
+                        .requestMatchers("/api/v1/notification/**").permitAll()  // 개발용: 파일 목록 조회 인증 제외
                         .requestMatchers("/api/v1/auth/login-check").authenticated()
                         .anyRequest().authenticated()
                 )
