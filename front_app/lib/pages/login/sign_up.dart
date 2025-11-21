@@ -89,7 +89,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
         );
         
         // 인증 상태 초기화
-        await ref.read(authNotifierProvider.notifier).logout();
+        // await ref.read(authNotifierProvider.notifier).logout();
         
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
