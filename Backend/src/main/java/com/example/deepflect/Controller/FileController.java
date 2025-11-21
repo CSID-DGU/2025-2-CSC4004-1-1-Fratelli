@@ -68,8 +68,9 @@ public class FileController {
     @Value("${file.dir}")
     private String fileDir;
 
-    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<String> upload(@RequestParam("file") MultipartFile file) {
+    @PostMapping(value = {"/upload", "/uploads"}, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<String> upload(@RequestParam("file") MultipartFile file,
+                                         @RequestParam(value = "type", required = false) String type) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         UserDetails userDetails = (UserDetails) auth.getPrincipal();
 
@@ -258,11 +259,11 @@ public class FileController {
     }
 
     // --- Mock endpoints to return the requested response shapes ---
-    @GetMapping("/upload-status/{fileID}")
-    public ResponseEntity<?> getUploadStatus(@PathVariable("fileID") String tempFileID) {
-        var st = uploadProgressService.getStatus(tempFileID);
+    @GetMapping("/upload-status/{taskId}")
+    public ResponseEntity<?> getUploadStatus(@PathVariable("taskId") String taskId) {
+        var st = uploadProgressService.getStatus(taskId);
         if (st == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "no status for fileID"));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "no status for taskId"));
         }
         return ResponseEntity.ok(st);
     }
