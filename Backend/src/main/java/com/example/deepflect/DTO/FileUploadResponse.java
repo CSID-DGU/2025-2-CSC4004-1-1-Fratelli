@@ -20,6 +20,7 @@ public class FileUploadResponse {
     private long size; // bytes
     private FileType fileType; // "video", "image", "audio"
     private Status status; // UPLOADING, FAILED, SUCCESS
+    private int progress; // 진행률 (0-100)
     private Timestamp timestamp; // ISO8601 timestamp string
     private String userEmail; // 업로드한 사용자 이메일
 
@@ -30,6 +31,7 @@ public class FileUploadResponse {
         this.size = size;
         this.fileType = fileType;
         this.status = status;
+        this.progress = 0;
         this.timestamp = timestamp;
     }
 }
