@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentMap;
 @Service
 public class UploadProgressService {
 
-    // Map tempFileID -> FileUploadStatusResponse
+    // Map taskId -> FileUploadStatusResponse
     private final ConcurrentMap<String, FileUploadStatusResponse> statusMap = new ConcurrentHashMap<>();
 
     // Map taskId -> FileUploadResponse (when available)
@@ -23,8 +23,8 @@ public class UploadProgressService {
         statusMap.put(status.getTaskId(), status);
     }
 
-    public FileUploadStatusResponse getStatus(String tempFileID) {
-        return statusMap.get(tempFileID);
+    public FileUploadStatusResponse getStatus(String taskId) {
+        return statusMap.get(taskId);
     }
 
     public List<FileUploadStatusResponse> listStatuses() {

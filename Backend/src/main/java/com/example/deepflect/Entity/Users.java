@@ -30,23 +30,8 @@ public class Users{
     @Column(name = "user_name", length = 100)
     private String userName;
 
-//    @Enumerated(EnumType.STRING)
-//    private UserStatus status;
-
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-
-//    @PrePersist
-//    public void prePersist() {
-//        this.createdAt = LocalDateTime.now();
-//        this.updatedAt = LocalDateTime.now();
-//        if (this.status == null) this.status = UserStatus.ACTIVE;
-//    }
-
-//    @PreUpdate
-//    public void preUpdate() {
-//        this.updatedAt = LocalDateTime.now();
-//    }
 
     // 양방향 매핑
     @JsonIgnore
@@ -55,4 +40,7 @@ public class Users{
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private List<Files> filesList = new ArrayList<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Device> devices = new ArrayList<>();
 }

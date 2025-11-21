@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum Status {
     UPLOADING("uploading"),
-    FAILED("failed"),
+    FAILED("fail"),
     SUCCESS("success");
 
     private final String value;
