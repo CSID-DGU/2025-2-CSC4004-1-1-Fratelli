@@ -4,7 +4,6 @@ interface FullButtonProps {
 }
 
 const FullButton = ({ text, onTap }: FullButtonProps) => {
-  // 사이드 패널의 부모 컨테이너 너비에서 양쪽 여백(24px * 2)을 뺀 크기
   const horizontalPadding = 24.0
 
   return (
@@ -17,7 +16,6 @@ const FullButton = ({ text, onTap }: FullButtonProps) => {
         position: "relative",
         margin: `0 ${horizontalPadding}px`
       }}>
-      {/* 테두리 컨테이너 */}
       <div
         style={{
           position: "absolute",
@@ -31,7 +29,6 @@ const FullButton = ({ text, onTap }: FullButtonProps) => {
         }}
       />
 
-      {/* 텍스트 (중앙 정렬) */}
       <div
         style={{
           position: "absolute",

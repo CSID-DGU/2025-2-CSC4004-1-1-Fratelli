@@ -25,11 +25,9 @@ const FullFormInput = ({
   const [error, setError] = useState<string | undefined>(undefined)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // controlled 또는 uncontrolled 모드 지원
   const isControlled = controlledValue !== undefined
   const value = isControlled ? controlledValue : internalValue
 
-  // 사이드 패널의 부모 컨테이너 너비에서 양쪽 여백(24px * 2)을 뺀 크기
   const horizontalPadding = 24.0
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -57,7 +55,7 @@ const FullFormInput = ({
     }
   }
 
-  // ref 병합 (controller와 내부 ref)
+  // ref 병합
   const inputRefToUse = controller || inputRef
 
   return (
@@ -69,7 +67,6 @@ const FullFormInput = ({
         flexDirection: "column",
         margin: `0 ${horizontalPadding}px`
       }}>
-      {/* 라벨 텍스트 */}
       <div
         style={{
           display: "flex",
@@ -88,7 +85,6 @@ const FullFormInput = ({
         </span>
       </div>
 
-      {/* 입력 필드 */}
       <div
         style={{
           width: "100%",

@@ -7,7 +7,6 @@ interface LoginButtonProps {
 }
 
 const LoginButton = ({ text, onTap, icon }: LoginButtonProps) => {
-  // 사이드 패널의 부모 컨테이너 너비에서 양쪽 여백(24px * 2)을 뺀 크기
   const horizontalPadding = 24.0
 
   return (
@@ -21,7 +20,6 @@ const LoginButton = ({ text, onTap, icon }: LoginButtonProps) => {
         margin: `0 ${horizontalPadding}px`,
         backgroundColor: "transparent"
       }}>
-      {/* 배경 컨테이너 (그림자 포함) */}
       <div
         style={{
           position: "absolute",
@@ -36,7 +34,6 @@ const LoginButton = ({ text, onTap, icon }: LoginButtonProps) => {
         }}
       />
 
-      {/* 텍스트와 아이콘 (중앙 정렬, 약간 위로 이동) */}
       <div
         style={{
           position: "absolute",
