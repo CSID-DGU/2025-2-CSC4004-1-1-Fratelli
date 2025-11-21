@@ -30,7 +30,7 @@ export interface FileListItem {
 interface RawFileListItem {
   taskId: string
   fileName: string
-  fileType: "video" | "photo" | "image"
+  fileType: string
   size: number
   url: string
   message?: string
@@ -206,8 +206,8 @@ export const getFiles = async (type?: FileType): Promise<FileListItem[]> => {
     const data = (await response.json()) as FileListResponse
 
     const mapped: FileListItem[] = data.files.map((file) => {
-      const normalizedType: FileType =
-        file.fileType === "video" ? "video" : "image"
+      const rawType = (file.fileType || "").toString().toLowerCase()
+      const normalizedType: FileType = rawType === "video" ? "video" : "image"
 
       return {
         taskId: file.taskId,
