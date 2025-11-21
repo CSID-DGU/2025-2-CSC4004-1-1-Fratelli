@@ -58,7 +58,7 @@ public class FileController {
 
     @Autowired
     ProgressManager progressManager;
-    
+
     @Autowired
     DownloadService downloadService;
 
@@ -67,6 +67,9 @@ public class FileController {
 
     @Value("${file.dir}")
     private String fileDir;
+
+    @Value("${file.output_dir}")
+    private String outputDir;
 
     @PostMapping(value = {"/upload", "/uploads"}, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> upload(@RequestParam("file") MultipartFile file,
@@ -79,15 +82,17 @@ public class FileController {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         // 업로드 폴더 생성 (uploadedFiles/user_email)
-        String userFolderPath = fileDir + "/" + user.getEmail(); // fileDir = /Users/betty/OSS_team1/uploadedFiles
-        File folder = new File(userFolderPath);
+        // [수정 2] 경로 생성 시 File 객체 활용 (OS 호환성 확보)
+        File folder = new File(fileDir, user.getEmail());
+//        String userFolderPath = fileDir + "/" + user.getEmail(); // fileDir = /Users/betty/OSS_team1/uploadedFiles
+//        File folder = new File(userFolderPath);
         if (!folder.exists()) {
             folder.mkdirs(); // 상위 폴더까지 생성
         }
 
         String taskId = UUID.randomUUID().toString();
         String savedPath = fileService.saveOriginalFile(file, user, taskId);
-        
+
         // 업로드 메타데이터 저장
         String fileName = file.getOriginalFilename();
         String lower = fileName != null ? fileName.toLowerCase() : "";
@@ -98,7 +103,7 @@ public class FileController {
             fileType = FileType.IMAGE;
         } else
             fileType = FileType.UNKNOWN;
-        
+
         FileUploadResponse uploadMeta = new FileUploadResponse(
             taskId,
             fileName,
@@ -109,7 +114,7 @@ public class FileController {
         );
         uploadMeta.setUserEmail(user.getEmail());
         uploadProgressService.saveUpload(uploadMeta);
-        
+
         aiService.requestNoiseProcessing(taskId, savedPath);
 
         return ResponseEntity.ok(taskId);
@@ -117,7 +122,8 @@ public class FileController {
 
     @GetMapping("/download/{taskId}/{fileName}")
     public ResponseEntity<Resource> download(@PathVariable("taskId") String taskId, @PathVariable("fileName") String fileName) {
-        File file = new File(fileDir + "/" + taskId + "_" + fileName);
+        // [수정 3] 하드코딩된 문자열 결합 대신 File 생성자 사용
+        File file = new File(fileDir, taskId + "_" + fileName);
         if (!file.exists()) {
             return ResponseEntity.notFound().build();
         }
@@ -133,68 +139,40 @@ public class FileController {
     public ResponseEntity<Resource> downloadProtected(@PathVariable("taskId") String taskId) {
         try {
             System.out.println("[FileController] Downloading protected file for taskId: " + taskId);
-            
-            // Python 서버의 outputs 폴더에서 보호된 파일 찾기
-            String pythonOutputsDir = "C:\\Users\\betty\\2025-2-CSC4004-1-1-Fratelli\\AI\\temp\\outputs";
-            
-            // 확장자 시도(우선 이미지 -> 영상 -> 음성)
-            File[] possibleFiles = {
-                new File(pythonOutputsDir + "\\" + taskId + "_protected.png"),
-                new File(pythonOutputsDir + "\\" + taskId + "_protected.jpg"),
-                new File(pythonOutputsDir + "\\" + taskId + "_protected.jpeg"),
-                new File(pythonOutputsDir + "\\" + taskId + "_protected.webp"),
-                new File(pythonOutputsDir + "\\" + taskId + "_protected.mp4"),
-                new File(pythonOutputsDir + "\\" + taskId + "_protected.wav")
-            };
-            
-            File protectedFile = null;
-            for (File f : possibleFiles) {
-                System.out.println("[FileController] Checking: " + f.getAbsolutePath() + " exists=" + f.exists());
-                if (f.exists()) {
-                    protectedFile = f;
-                    System.out.println("[FileController] Found file: " + f.getAbsolutePath());
-                    break;
-                }
-            }
-            
+
+            // [수정] 헬퍼 메서드로 파일 찾기 (outputDir 사용)
+            File protectedFile = fileService.findProtectedFile(taskId);
+
             if (protectedFile == null) {
                 System.out.println("[FileController] No protected file found for taskId: " + taskId);
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(null);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
             }
-            
-            // 파일 타입 판단 (이미지/비디오/오디오)
-            String name = protectedFile.getName().toLowerCase();
+
+            String fileName = protectedFile.getName();
+            // [변경] Service 호출
+            FileType fileType = fileService.determineFileType(fileName);
+
+            // 컨텐츠 타입 결정 로직 (이것도 사실 서비스나 유틸로 빼면 좋음)
             String contentType;
-            String fileName;
-            if (name.endsWith(".png")) {
-                contentType = "image/png";
-                fileName = "protected_" + taskId + ".png";
-            } else if (name.endsWith(".jpg") || name.endsWith(".jpeg")) {
-                contentType = "image/jpeg";
-                fileName = "protected_" + taskId + ".jpg";
-            } else if (name.endsWith(".webp")) {
-                contentType = "image/webp";
-                fileName = "protected_" + taskId + ".webp";
-            } else if (name.endsWith(".mp4")) {
+            if (fileType == FileType.IMAGE) {
+                if (fileName.endsWith(".png")) contentType = "image/png";
+                else if (fileName.endsWith(".webp")) contentType = "image/webp";
+                else contentType = "image/jpeg";
+            } else if (fileType == FileType.VIDEO) {
                 contentType = "video/mp4";
-                fileName = "protected_" + taskId + ".mp4";
             } else {
-                // 기본으로 wav 처리 (과거 호환성 유지)
                 contentType = "audio/wav";
-                fileName = "protected_" + taskId + ".wav";
             }
-            
+
             Resource resource = new FileSystemResource(protectedFile);
             System.out.println("[FileController] Sending file: " + fileName + " contentType=" + contentType);
-            
+
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
                     .contentType(MediaType.parseMediaType(contentType))
                     .body(resource);
-                    
+
         } catch (Exception e) {
-            System.out.println("[FileController] Error downloading file: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
@@ -227,11 +205,11 @@ public class FileController {
             int progress = progressService.getProgress(taskId);
             boolean isCompleted = downloadService.isCompleted(taskId);
             String downloadUrl = null;
-            
+
             if (isCompleted) {
                 downloadUrl = downloadService.getDownloadUrl(taskId);
             }
-            
+
             return ResponseEntity.ok(Map.of(
                     "taskId", taskId,
                     "progress", progress,
@@ -306,72 +284,32 @@ public class FileController {
         return ResponseEntity.ok(resp);
     }
 
-//    @GetMapping("/uploads")
-//    public ResponseEntity<FileUploadListResponse> getUploads(
-//            @RequestParam(value = "type", required = false) FileType type) {
-//        var uploads = uploadProgressService.listUploads();
-//
-//        // 각 업로드에 대해 진행률 기반 상태 업데이트
-//        for (FileUploadResponse upload : uploads) {
-//            if (upload.getTaskId() != null) {
-//                int progress = progressService.getProgress(upload.getTaskId());
-//
-//                // 실패 여부 확인 후 상태 업데이트
-//                if (progressService.isFailed(upload.getTaskId())) {
-//                    upload.setStatus(Status.FAILED);
-//                } else if (progress >= 100) {
-//                    upload.setStatus(Status.SUCCESS);
-//                } else {
-//                    upload.setStatus(Status.UPLOADING);
-//                }
-//            }
-//        }
-//
-//        // type 파라미터로 필터링
-//        if (type != null) {
-//            uploads = uploads.stream()
-//                    .filter(u -> u.getFileType() == type)
-//                    .collect(java.util.stream.Collectors.toList());
-//        }
-//
-//        var resp = new FileUploadListResponse(uploads);
-//        return ResponseEntity.ok(resp);
-//    }
-
     @GetMapping
     public ResponseEntity<FileListResponse> listFiles(@RequestParam(value = "type", required = false) FileType type) {
         try {
-            // Python outputs 폴더에서 처리 완료된 파일 스캔
-            String pythonOutputsDir = "C:\\Users\\betty\\2025-2-CSC4004-1-1-Fratelli\\AI\\temp\\outputs";
-            File outputsFolder = new File(pythonOutputsDir);
-            
+            // [수정] outputDir 변수 사용
+            File outputsFolder = new File(outputDir);
+
+            // 1. outputDir 경로 확인
+            System.out.println("========== [DEBUG] listFiles 시작 ==========");
+            System.out.println("설정된 outputDir 값: " + outputDir);
+            System.out.println("설정된 outputsFolder 값: " + outputsFolder);
+
             java.util.List<FilesDTO> filesList = new java.util.ArrayList<>();
-            
+
             if (outputsFolder.exists() && outputsFolder.isDirectory()) {
                 File[] files = outputsFolder.listFiles((dir, name) -> name.contains("_protected."));
-                
+
                 if (files != null) {
                     for (File f : files) {
-                        // 파일명에서 taskId 추출 (예: taskId_protected.mp4 -> taskId)
                         String fileName = f.getName();
                         String taskId = fileName.substring(0, fileName.indexOf("_protected"));
-                        
-                        // 파일 타입 감지
-                        String nameLower = fileName.toLowerCase();
-                        FileType fileType;
-                        if (nameLower.endsWith(".png") || nameLower.endsWith(".jpg") || 
-                            nameLower.endsWith(".jpeg") || nameLower.endsWith(".webp")) {
-                            fileType = FileType.IMAGE;
-                        } else if (nameLower.endsWith(".mp4")) {
-                            fileType = FileType.VIDEO;
-                        } else {
-                            fileType = FileType.UNKNOWN;
-                        }
 
-                        // type: FileType enum
-                        if (type != null && fileType != type) {
-                            continue;
-                        }
+                        // 파일 타입 감지 (enum 변환 로직 간소화 가능)
+                        String nameLower = fileName.toLowerCase();
+                        FileType fileType = fileService.determineFileType(nameLower);
+
+                        if (type != null && fileType != type) continue;
 
                         FilesDTO dto = new FilesDTO();
                         dto.setTaskId(taskId);
@@ -384,14 +322,10 @@ public class FileController {
                     }
                 }
             }
-            
-            FileListResponse resp = new FileListResponse(filesList);
-            return ResponseEntity.ok(resp);
-            
+            return ResponseEntity.ok(new FileListResponse(filesList));
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new FileListResponse(new java.util.ArrayList<>()));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new FileListResponse(new java.util.ArrayList<>()));
         }
     }
 
@@ -399,61 +333,28 @@ public class FileController {
     @GetMapping("/{taskId}/download")
     public ResponseEntity<ResultDownloadResponse> getResultDownload(@PathVariable("taskId") String taskId) {
         try {
-            // Check if processing is completed
             if (!downloadService.isCompleted(taskId)) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(new ResultDownloadResponse(taskId, null, null, 0L, null, "File not ready yet", null));
             }
 
-            // Python outputs 폴더에서 보호된 파일 찾기
-            String pythonOutputsDir = "C:\\Users\\betty\\2025-2-CSC4004-1-1-Fratelli\\AI\\temp\\outputs";
-            
-            File[] possibleFiles = {
-                new File(pythonOutputsDir + "\\" + taskId + "_protected.png"),
-                new File(pythonOutputsDir + "\\" + taskId + "_protected.jpg"),
-                new File(pythonOutputsDir + "\\" + taskId + "_protected.jpeg"),
-                new File(pythonOutputsDir + "\\" + taskId + "_protected.webp"),
-                new File(pythonOutputsDir + "\\" + taskId + "_protected.mp4"),
-                new File(pythonOutputsDir + "\\" + taskId + "_protected.wav")
-            };
-            
-            File protectedFile = null;
-            for (File f : possibleFiles) {
-                if (f.exists()) {
-                    protectedFile = f;
-                    break;
-                }
-            }
-            
+            // [수정] 헬퍼 메서드 사용
+            File protectedFile = fileService.findProtectedFile(taskId);
+
             if (protectedFile == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(new ResultDownloadResponse(taskId, null, null, 0L, null, "Protected file not found", null));
             }
 
-            // 파일 정보 추출
             String fileName = protectedFile.getName();
-            FileType fileType;
-            String nameLower = fileName.toLowerCase();
-            if (nameLower.endsWith(".png") || nameLower.endsWith(".jpg") || nameLower.endsWith(".jpeg") || nameLower.endsWith(".webp")) {
-                fileType = FileType.IMAGE;
-            } else if (nameLower.endsWith(".mp4")) {
-                fileType = FileType.VIDEO;
-            } else {
-                fileType = FileType.UNKNOWN;
-            }
+            FileType fileType = fileService.determineFileType(fileName.toLowerCase());
 
             long size = protectedFile.length();
             String downloadUrl = "http://localhost:8080/api/v1/files/download-protected/" + taskId;
             Timestamp timestamp = Timestamp.from(java.time.Instant.now());
 
             ResultDownloadResponse resp = new ResultDownloadResponse(
-                taskId, 
-                fileName, 
-                fileType, 
-                size, 
-                downloadUrl, 
-                "File ready for download", 
-                timestamp
+                    taskId, fileName, fileType, size, downloadUrl, "File ready for download", timestamp
             );
             return ResponseEntity.ok(resp);
 
@@ -490,22 +391,16 @@ public class FileController {
 
             System.out.println("[FileController] Received upload-response: taskId=" + uploadResp.getTaskId() + ", fileName=" + uploadResp.getFileName() + ", status=" + uploadResp.getStatus());
 
-            // Check local expected file path (user-scoped storage)
-            String userFolderPath = fileDir + "/" + user.getEmail();
-            String expectedPath = userFolderPath + "/" + uploadResp.getTaskId() + "_" + uploadResp.getFileName();
-            File f = new File(expectedPath);
+            /// [수정] File 객체 사용하여 경로 생성 (OS 호환성)
+            File userFolder = new File(fileDir, user.getEmail());
+            File expectedFile = new File(userFolder, uploadResp.getTaskId() + "_" + uploadResp.getFileName());
+//            File f = new File(expectedPath);
 
-            if (f.exists()) {
-                System.out.println("[FileController] Found local file for taskId=" + uploadResp.getTaskId() + ", starting AI processing: " + expectedPath);
-                // Trigger AI processing using existing path
-                aiService.requestNoiseProcessing(uploadResp.getTaskId(), expectedPath);
-                // store upload metadata for listing
+            if (expectedFile.exists()) {
+                aiService.requestNoiseProcessing(uploadResp.getTaskId(), expectedFile.getAbsolutePath());
                 uploadProgressService.saveUpload(uploadResp);
                 return ResponseEntity.ok(Map.of("taskId", uploadResp.getTaskId(), "processed", true));
             } else {
-                System.out.println("[FileController] Local file not found for taskId=" + uploadResp.getTaskId() + ", expected=" + expectedPath);
-                // Accept and store metadata for later processing (not implemented: DB save)
-                // still store metadata so /uploads can show it
                 uploadProgressService.saveUpload(uploadResp);
                 return ResponseEntity.status(HttpStatus.ACCEPTED).body(Map.of("taskId", uploadResp.getTaskId(), "processed", false, "message", "file not found locally"));
             }
@@ -514,7 +409,7 @@ public class FileController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", e.getMessage()));
         }
     }
-    
+
     // 업로드 중인 파일 삭제 (취소)
     @DeleteMapping("/uploads/{taskId}")
     public ResponseEntity<?> deleteUpload(@PathVariable("taskId") String taskId) {
@@ -523,51 +418,32 @@ public class FileController {
             UserDetails userDetails = (UserDetails) auth.getPrincipal();
             Users user = usersRepository.findByEmail(userDetails.getUsername())
                     .orElseThrow(() -> new RuntimeException("User not found"));
-            
+
             // 업로드 메타데이터 조회
             FileUploadResponse upload = uploadProgressService.getUpload(taskId);
             if (upload == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of("message", "Upload not found", "status", 404));
             }
-            
-            // 원본 파일 삭제 (uploads 폴더)
-            String userFolderPath = fileDir + "/" + user.getEmail();
-            String uploadedFilePath = userFolderPath + "/" + taskId + "_" + upload.getFileName();
-            File uploadedFile = new File(uploadedFilePath);
+
+            // [수정] 원본 파일 삭제 경로 File 객체 사용
+            File userFolder = new File(fileDir, user.getEmail());
+            File uploadedFile = new File(userFolder, taskId + "_" + upload.getFileName());
+
             if (uploadedFile.exists()) {
                 uploadedFile.delete();
-                System.out.println("[FileController] Deleted uploaded file: " + uploadedFilePath);
+                System.out.println("[FileController] Deleted uploaded file: " + uploadedFile.getAbsolutePath());
             }
-            
-            // 진행 중이던 보호된 파일도 삭제 (outputs 폴더)
-            String pythonOutputsDir = "C:\\Users\\betty\\2025-2-CSC4004-1-1-Fratelli\\AI\\temp\\outputs";
-            File[] possibleFiles = {
-                new File(pythonOutputsDir + "\\" + taskId + "_protected.png"),
-                new File(pythonOutputsDir + "\\" + taskId + "_protected.jpg"),
-                new File(pythonOutputsDir + "\\" + taskId + "_protected.jpeg"),
-                new File(pythonOutputsDir + "\\" + taskId + "_protected.webp"),
-                new File(pythonOutputsDir + "\\" + taskId + "_protected.mp4")
-            };
-            for (File f : possibleFiles) {
-                if (f.exists()) {
-                    f.delete();
-                    System.out.println("[FileController] Deleted protected file: " + f.getAbsolutePath());
-                }
-            }
-            
-            // AI 서버에 취소 요청 전송
-            try {
-                aiService.cancelProcessing(taskId);
-                System.out.println("[FileController] AI processing cancellation requested for taskId: " + taskId);
-            } catch (Exception e) {
-                System.out.println("[FileController] Failed to cancel AI processing: " + e.getMessage());
-            }
-            
-            // 메타데이터 삭제
+
+            // [수정] 결과 파일 삭제 (헬퍼 메서드 사용)
+            fileService.deleteProtectedFiles(taskId);
+
+            try { aiService.cancelProcessing(taskId); }
+            catch (Exception e) { System.out.println("Failed to cancel: " + e.getMessage()); }
+
             uploadProgressService.deleteUpload(taskId);
-            progressService.updateProgress(taskId, 0); // 진행률 초기화
-            
+            progressService.updateProgress(taskId, 0);
+
             return ResponseEntity.ok(Map.of("message", "Upload deleted", "status", 200));
         } catch (Exception e) {
             e.printStackTrace();
@@ -575,45 +451,23 @@ public class FileController {
                     .body(Map.of("message", e.getMessage(), "status", 500));
         }
     }
-    
+
     // 변환 완료된 결과 파일 삭제
     @DeleteMapping("/{taskId}")
     public ResponseEntity<?> deleteResult(@PathVariable("taskId") String taskId) {
         try {
-            // Python outputs 폴더에서 보호된 파일 찾아서 삭제
-            String pythonOutputsDir = "C:\\Users\\betty\\2025-2-CSC4004-1-1-Fratelli\\AI\\temp\\outputs";
-            
-            File[] possibleFiles = {
-                new File(pythonOutputsDir + "\\" + taskId + "_protected.png"),
-                new File(pythonOutputsDir + "\\" + taskId + "_protected.jpg"),
-                new File(pythonOutputsDir + "\\" + taskId + "_protected.jpeg"),
-                new File(pythonOutputsDir + "\\" + taskId + "_protected.webp"),
-                new File(pythonOutputsDir + "\\" + taskId + "_protected.mp4")
-            };
-            
-            boolean deleted = false;
-            for (File f : possibleFiles) {
-                if (f.exists()) {
-                    f.delete();
-                    System.out.println("[FileController] Deleted result file: " + f.getAbsolutePath());
-                    deleted = true;
-                }
-            }
-            
+            // [수정] 헬퍼 메서드 사용
+            boolean deleted = fileService.deleteProtectedFiles(taskId);
+
             if (!deleted) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("message", "Result file not found", "status", 404));
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Result file not found", "status", 404));
             }
-            
-            // 다운로드 URL 정보 삭제
-//            downloadService.saveDownloadUrl(taskId, null);
-            
             return ResponseEntity.ok(Map.of("message", "Result deleted", "status", 200));
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", e.getMessage(), "status", 500));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", e.getMessage(), "status", 500));
         }
     }
+
 
 }
