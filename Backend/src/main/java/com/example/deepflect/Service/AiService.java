@@ -22,9 +22,9 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 public class AiService {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(AiService.class);
-    
+
     @Value("${ai.server.url}")
     private String aiServerUrl;
 
@@ -39,7 +39,7 @@ public class AiService {
     public void requestNoiseProcessing(String taskId, String filePath) {
         try {
             logger.info("[{}] Sending audio to protection service", taskId);
-            
+
             MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
             body.add("file", new FileSystemResource(new File(filePath)));
 
@@ -62,41 +62,41 @@ public class AiService {
             HttpEntity<MultiValueMap<String, Object>> requestEntity =
                     new HttpEntity<>(body, headers);
 
-                // Use unified processing endpoint with taskId parameter
-                ResponseEntity<Map> response = restTemplate.postForEntity(
+            // Use unified processing endpoint with taskId parameter
+            ResponseEntity<Map> response = restTemplate.postForEntity(
                     aiServerUrl + "/api/v1/process-file?taskId=" + taskId,
                     requestEntity,
                     Map.class
-                );
-            
+            );
+
             logger.info("[{}] Protection response: {}", taskId, response.getBody());
-            
+
         } catch (Exception e) {
             logger.error("[{}] Error calling protection service", taskId, e);
             throw new RuntimeException("Failed to protect audio: " + e.getMessage());
         }
     }
-    
+
     /**
      * 보호된 음성 다운로드
      */
     public byte[] downloadProtectedAudio(String taskId) {
         try {
             logger.info("[{}] Downloading protected audio", taskId);
-            
+
             ResponseEntity<byte[]> response = restTemplate.getForEntity(
                     aiServerUrl + "/api/v1/download/" + taskId,
                     byte[].class
             );
-            
+
             return response.getBody();
-            
+
         } catch (Exception e) {
             logger.error("[{}] Error downloading protected audio", taskId, e);
             throw new RuntimeException("Failed to download audio: " + e.getMessage());
         }
     }
-    
+
     /**
      * 작업 상태 조회
      */
@@ -106,15 +106,15 @@ public class AiService {
                     aiServerUrl + "/api/v1/status/" + taskId,
                     Map.class
             );
-            
+
             return response.getBody();
-            
+
         } catch (Exception e) {
             logger.error("[{}] Error getting protection status", taskId, e);
             throw new RuntimeException("Failed to get status: " + e.getMessage());
         }
     }
-    
+
     /**
      * 서버 헬스 체크
      */
@@ -124,15 +124,15 @@ public class AiService {
                     aiServerUrl + "/health",
                     Map.class
             );
-            
+
             return response.getStatusCode().is2xxSuccessful();
-            
+
         } catch (Exception e) {
             logger.error("AI server health check failed", e);
             return false;
         }
     }
-    
+
     /**
      * 처리 중인 작업 취소
      * @param taskId 작업 ID
@@ -140,11 +140,11 @@ public class AiService {
     public void cancelProcessing(String taskId) {
         try {
             logger.info("[{}] Requesting cancellation from AI server", taskId);
-            
+
             restTemplate.delete(aiServerUrl + "/api/v1/cancel/" + taskId);
-            
+
             logger.info("[{}] Cancellation request sent successfully", taskId);
-            
+
         } catch (Exception e) {
             logger.error("[{}] Error cancelling processing", taskId, e);
             // 에러가 나도 계속 진행 (AI 서버가 꺼져있을 수도 있음)

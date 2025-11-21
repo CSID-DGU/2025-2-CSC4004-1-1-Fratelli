@@ -72,8 +72,8 @@ public class FileController {
     private String outputDir;
 
     @PostMapping(value = {"/upload", "/uploads"}, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<String> upload(@RequestParam("file") MultipartFile file,
-                                         @RequestParam(value = "type", required = false) String type) {
+    public ResponseEntity<?> upload(@RequestParam("file") MultipartFile file,
+                                    @RequestParam(value = "type", required = false) String type) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         UserDetails userDetails = (UserDetails) auth.getPrincipal();
 
@@ -105,19 +105,20 @@ public class FileController {
             fileType = FileType.UNKNOWN;
 
         FileUploadResponse uploadMeta = new FileUploadResponse(
-            taskId,
-            fileName,
-            file.getSize(),
-            fileType,
-            Status.UPLOADING,
-            Timestamp.from(java.time.Instant.now())
+                taskId,
+                fileName,
+                file.getSize(),
+                fileType,
+                Status.UPLOADING,
+                Timestamp.from(java.time.Instant.now())
         );
         uploadMeta.setUserEmail(user.getEmail());
         uploadProgressService.saveUpload(uploadMeta);
 
         aiService.requestNoiseProcessing(taskId, savedPath);
 
-        return ResponseEntity.ok(taskId);
+        return ResponseEntity.ok(uploadMeta);
+//        return ResponseEntity.ok(taskId);
     }
 
     @GetMapping("/download/{taskId}/{fileName}")
@@ -253,10 +254,11 @@ public class FileController {
 
         var uploads = uploadProgressService.listUploads();
 
-        // 진행률 기반 상태 업데이트
+        // 진행률 기반 상태 및 progress 업데이트
         for (FileUploadResponse upload : uploads) {
             if (upload.getTaskId() != null) {
                 int progress = progressService.getProgress(upload.getTaskId());
+                upload.setProgress(progress); // 진행률 설정
 
                 if (progressService.isFailed(upload.getTaskId())) {
                     upload.setStatus(Status.FAILED);
@@ -380,7 +382,7 @@ public class FileController {
     }
 
     @PostMapping(value = "/upload-response", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> handleUploadResponse(@RequestBody com.example.deepflect.DTO.FileUploadResponse uploadResp) {
+    public ResponseEntity<?> handleUploadResponse(@RequestBody FileUploadResponse uploadResp) {
         try {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             UserDetails userDetails = (UserDetails) auth.getPrincipal();
