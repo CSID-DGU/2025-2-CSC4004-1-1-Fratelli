@@ -106,6 +106,7 @@ public class FileController {
             Status.UPLOADING,
             Timestamp.from(java.time.Instant.now())
         );
+        uploadMeta.setUserEmail(user.getEmail());
         uploadProgressService.saveUpload(uploadMeta);
         
         aiService.requestNoiseProcessing(taskId, savedPath);
@@ -257,11 +258,11 @@ public class FileController {
     }
 
     // --- Mock endpoints to return the requested response shapes ---
-    @GetMapping("/upload-status/{tempFileID}")
-    public ResponseEntity<?> getUploadStatus(@PathVariable("tempFileID") String tempFileID) {
+    @GetMapping("/upload-status/{fileID}")
+    public ResponseEntity<?> getUploadStatus(@PathVariable("fileID") String tempFileID) {
         var st = uploadProgressService.getStatus(tempFileID);
         if (st == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "no status for tempFileID"));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "no status for fileID"));
         }
         return ResponseEntity.ok(st);
     }
