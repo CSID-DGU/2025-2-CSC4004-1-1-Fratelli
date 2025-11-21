@@ -34,7 +34,7 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/auth/register", "/api/v1/auth/login").permitAll()
+                        .requestMatchers("/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/refresh").permitAll()
                         .requestMatchers("/api/v1/callback/**").permitAll()  // AI 콜백 엔드포인트 인증 불필요
                         .requestMatchers("/api/v1/files/download-protected/**").permitAll() // 보호된 파일 다운로드는 인증 불필요(설정에 따라 변경 가능)
                         .requestMatchers("/api/v1/files/upload").permitAll()  // 개발용: 파일 업로드 인증 제외 (프로덕션에서는 제거)
