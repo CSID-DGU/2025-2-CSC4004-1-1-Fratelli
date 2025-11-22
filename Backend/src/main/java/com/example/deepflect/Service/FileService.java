@@ -138,7 +138,6 @@ public class FileService {
         return null;
     }
 
-    // [이동 & 변경] private -> public
     public boolean deleteProtectedFiles(String taskId) {
         File[] possibleFiles = {
                 new File(outputDir, taskId + "_protected.png"),

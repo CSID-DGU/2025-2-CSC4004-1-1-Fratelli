@@ -1,16 +1,23 @@
 package com.example.deepflect.Service;
 
+import com.example.deepflect.DTO.DeviceDeleteRequest;
 import com.example.deepflect.DTO.DeviceRequest;
 import com.example.deepflect.DTO.DeviceResponse;
 import com.example.deepflect.Entity.Device;
+import com.example.deepflect.Entity.UserTokens;
 import com.example.deepflect.Entity.Users;
 import com.example.deepflect.Repository.DeviceRepository;
 import com.example.deepflect.Repository.UsersRepository;
+import jakarta.transaction.Transactional;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
 import java.util.Optional;
 
+@Slf4j
+@Transactional
 @Service
 public class DeviceService {
 
@@ -47,4 +54,27 @@ public class DeviceService {
 
         return new DeviceResponse(true, "Device register successfully");
     }
+
+    /**
+     * 디바이스 삭제
+     */
+    public boolean deleteDevice(String fcmToken){
+
+        // DB에서 토큰 조회
+        Optional<Device> deviceTokenOpt = deviceRepository.findByFcmToken(fcmToken);
+
+        if (deviceTokenOpt.isPresent()) {
+            Device device = deviceTokenOpt.get();
+
+            // 토큰 삭제
+            deviceRepository.deleteById(device.getDeviceId());
+
+            log.info("디바이스 삭제 완료");
+            return true;
+        } else {
+            log.warn("DB에서 토큰을 찾을 수 없음: {}", fcmToken);
+            return false;
+        }
+    }
+
 }

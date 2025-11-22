@@ -4,6 +4,7 @@ import com.example.deepflect.DTO.*;
 import com.example.deepflect.Entity.Users;
 import com.example.deepflect.Repository.UsersRepository;
 import com.example.deepflect.Service.AuthService;
+import com.example.deepflect.Service.PasswordResetService;
 import com.example.deepflect.Service.QueryService;
 import com.example.deepflect.Service.UsersService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +15,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -28,6 +30,9 @@ public class AuthController {
 
     @Autowired
     UsersService usersService;
+
+    @Autowired
+    PasswordResetService passwordResetService;
 
     @Autowired
     UsersRepository usersRepository;
@@ -125,19 +130,36 @@ public class AuthController {
         }
     }
 
+    @PostMapping("/password-reset")
+    public ResponseEntity<String> passwordReset(@RequestBody PasswordResetRequest request) {
+        passwordResetService.sendPasswordResetMail(request.getEmail());
+        return ResponseEntity.ok("비밀번호 재설정 이메일이 발송되었습니다.");
+    }
 
 
+    @DeleteMapping("/quit")
+    public ResponseEntity<?> deleteUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        UserDetails userDetails = (UserDetails) auth.getPrincipal();
 
-    @DeleteMapping("/delete/{userNum}")
-    public ResponseEntity<String> deleteUser(@PathVariable("userNum") Long userNum) {
-        boolean deleted = usersService.deleteUserByNum(userNum);
+        // 이메일로 Users 엔티티 조회
+        Users user = usersRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (deleted) {
-            return ResponseEntity.ok("{\"message\": \"User deleted successfully\"}");
-        } else {
+        boolean deleted = usersService.deleteUserByNum(user.getUserNum());
+
+        if (deleted) return ResponseEntity.ok(Map.of("message", "User deleted successfully"));
+        else {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("{\"message\": \"User not found\"}");
+                    .body(Map.of("message", "User not found"));
         }
+
+//        if (deleted) {
+//            return ResponseEntity.ok("{\"message\": \"User deleted successfully\"}");
+//        } else {
+//            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+//                    .body("{\"message\": \"User not found\"}");
+//        }
     }
 
 }
