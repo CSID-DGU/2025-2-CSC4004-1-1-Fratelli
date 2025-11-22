@@ -18,9 +18,6 @@ import java.util.Optional;
 public class QueryService {
 
     @Autowired
-    UserDAO userDAO;
-
-    @Autowired
     PasswordEncoder passwordEncoder;
 
     @Autowired
@@ -77,7 +74,12 @@ public class QueryService {
     }
 
 
-
+    public void deleteByUserNum(Long userNum){
+        String sql = "DELETE FROM PasswordResetToken u WHERE u.user.userNum = :userNum";
+        em.createQuery(sql)
+                .setParameter("userNum", userNum)
+                .executeUpdate();  // DELETE는 executeUpdate() 사용
+    }
 
 //    public boolean deleteUserById(Long userNum) {
 //        Users user = em.find(Users.class, userNum);
