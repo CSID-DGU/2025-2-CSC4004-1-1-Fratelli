@@ -12,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -50,7 +51,7 @@ public class PasswordResetService {
 
         passwordResetTokenRepository.save(resetToken);
 
-        String link = "http://localhost:8080/api/v1/auth/reset-password?token=" + token;
+        String link = "http://localhost:8080/api/v1/auth/password-reset?token=" + token;
 
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(email);
@@ -74,4 +75,28 @@ public class PasswordResetService {
 
         passwordResetTokenRepository.delete(resetToken); // 사용 후 토큰 삭제
     }
+
+    public boolean validateToken(String token) {
+        // 1. DB에서 토큰 조회
+        Optional<PasswordResetToken> resetTokenOpt = passwordResetTokenRepository.findByToken(token);
+
+        if (resetTokenOpt.isEmpty()) {
+            return false; // 토큰 존재하지 않음
+        }
+
+        PasswordResetToken resetToken = resetTokenOpt.get();
+
+        // 2. 만료 체크
+        if (resetToken.getExpiryDate().isBefore(LocalDateTime.now())) {
+            return false; // 토큰 만료
+        }
+
+        // 3. 사용 여부 체크
+        if (resetToken.isUsed()) {
+            return false; // 이미 사용됨
+        }
+
+        return true; // 유효한 토큰
+    }
+
 }
