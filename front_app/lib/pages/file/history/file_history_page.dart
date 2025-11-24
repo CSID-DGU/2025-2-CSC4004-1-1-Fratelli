@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:deepflect_app/widgets/file/history/filter_button.dart';
 import 'package:deepflect_app/services/file_service.dart';
+import 'package:deepflect_app/services/token_storage.dart';
+import 'package:deepflect_app/models/auth/auth_provider.dart';
 
-class FileHistoryPage extends StatefulWidget {
+class FileHistoryPage extends ConsumerStatefulWidget {
   final GlobalKey<FileHistoryPageState>? stateKey;
   
   const FileHistoryPage({super.key, this.stateKey});
 
   @override
-  State<FileHistoryPage> createState() => FileHistoryPageState();
+  ConsumerState<FileHistoryPage> createState() => FileHistoryPageState();
 }
 
-class FileHistoryPageState extends State<FileHistoryPage> {
+class FileHistoryPageState extends ConsumerState<FileHistoryPage> {
   final FileService _fileService = FileService();
   int selectedTab = 0;
   final List<String> tabs = ['ALL', '사진', '동영상'];
@@ -23,10 +26,33 @@ class FileHistoryPageState extends State<FileHistoryPage> {
   @override
   void initState() {
     super.initState();
-    _loadFiles();
+    // 로그인 상태 확인 후 파일 로드
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAuthAndLoadFiles();
+    });
   }
 
   void refresh() {
+    _checkAuthAndLoadFiles();
+  }
+
+  Future<void> _checkAuthAndLoadFiles() async {
+    // 로그인 상태와 토큰 모두 확인
+    final authState = ref.read(authNotifierProvider);
+    final hasToken = await TokenStorage.hasTokens();
+    
+    // 로그인 상태가 아니고 토큰도 없으면 에러 표시
+    if (!authState.isAuthenticated && !hasToken) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = '로그인이 필요합니다.';
+        });
+      }
+      return;
+    }
+
+    // 로그인 상태이거나 토큰이 있으면 파일 로드
     _loadFiles();
   }
 
@@ -54,10 +80,22 @@ class FileHistoryPageState extends State<FileHistoryPage> {
       }
     } catch (e) {
       if (mounted) {
+        final errorMsg = e.toString().replaceAll('Exception: ', '');
         setState(() {
-          _errorMessage = e.toString().replaceAll('Exception: ', '');
+          _errorMessage = errorMsg;
           _isLoading = false;
         });
+        
+        // 토큰 관련 에러인 경우 로그인 상태 확인
+        if (errorMsg.contains('액세스 토큰') || errorMsg.contains('로그인')) {
+          // 로그인 상태 다시 확인
+          final authState = ref.read(authNotifierProvider);
+          if (!authState.isAuthenticated) {
+            setState(() {
+              _errorMessage = '로그인이 필요합니다.';
+            });
+          }
+        }
       }
     }
   }

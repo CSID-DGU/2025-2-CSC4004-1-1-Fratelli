@@ -24,11 +24,11 @@ class _FileUploadPageState extends State<FileUploadPage> {
   String _determineFileType(String fileName) {
     final extension = fileName.toLowerCase().split('.').last;
     if (extension == 'mp4' || extension == 'mp3') {
-      return 'video';
+      return 'VIDEO';
     } else if (extension == 'jpg' || extension == 'jpeg' || extension == 'png') {
-      return 'image';
+      return 'IMAGE';
     }
-    return 'image';
+    return 'IMAGE';
   }
 
   @override
@@ -97,50 +97,51 @@ class _FileUploadPageState extends State<FileUploadPage> {
               f["taskId"]!.toString(): f,
         };
 
-        // 1) 기존 files 업데이트
-        final List<Map<String, dynamic>> updated = files.map((local) {
+        // 1) taskId가 있는 기존 files 업데이트 (서버 정보로 덮어쓰기)
+        final Map<String, Map<String, dynamic>> updatedByTaskId = {};
+        final List<Map<String, dynamic>> localWithoutTaskId = [];
+
+        for (final local in files) {
           final localTaskId = local["taskId"]?.toString();
 
-          // 아직 서버에 등록되지 않은 로컬 파일(업로드 시작 직후 등)은 그대로 유지
+          // taskId가 없는 로컬 파일(업로드 시작 직후 등)은 별도로 보관
           if (localTaskId == null || localTaskId.isEmpty) {
-            return local;
+            localWithoutTaskId.add(local);
+            continue;
           }
 
           final serverFile = serverByTaskId[localTaskId];
 
           // 서버 목록에 더 이상 없고, 로컬 상태가 uploading 이면 -> 완료로 간주
           if (serverFile == null && local["status"] == "uploading") {
-            return {
+            updatedByTaskId[localTaskId] = {
               ...local,
               "status": "done",
               "progress": 1.0,
             };
-          }
-
-          // 서버 정보가 있으면 서버 상태/진행률로 덮어쓰기
-          if (serverFile != null) {
-            return {
+          } else if (serverFile != null) {
+            // 서버 정보가 있으면 서버 상태/진행률로 덮어쓰기
+            updatedByTaskId[localTaskId] = {
               ...local,
               "status": serverFile["status"],
               "progress": serverFile["progress"],
             };
+          } else {
+            // 서버에 없고 완료된 파일도 유지
+            updatedByTaskId[localTaskId] = local;
           }
+        }
 
-          return local;
-        }).toList();
+        // 2) 서버 파일들 추가 (기존에 없던 것만)
+        for (final serverFile in serverFiles) {
+          final tid = serverFile["taskId"]?.toString();
+          if (tid != null && tid.isNotEmpty && !updatedByTaskId.containsKey(tid)) {
+            updatedByTaskId[tid] = serverFile;
+          }
+        }
 
-        // 2) 기존에 없던 서버 파일들 추가
-        final existingTaskIds = updated
-            .map((f) => f["taskId"]?.toString())
-            .whereType<String>()
-            .toSet();
-
-        final List<Map<String, dynamic>> additional = serverFiles.where((f) {
-          final tid = f["taskId"]?.toString();
-          return tid != null && tid.isNotEmpty && !existingTaskIds.contains(tid);
-        }).toList();
-
-        files = [...updated, ...additional];
+        // 3) 최종 병합: taskId가 있는 파일들 + taskId가 없는 로컬 파일들
+        files = [...updatedByTaskId.values, ...localWithoutTaskId];
       });
     } catch (e) {
       if (!mounted) return;
@@ -157,6 +158,9 @@ class _FileUploadPageState extends State<FileUploadPage> {
   }
 
   Future<void> _onFileSelected(List<PlatformFile> selectedFiles) async {
+    // 먼저 모든 파일을 리스트에 추가
+    final List<Map<String, dynamic>> newFiles = [];
+    
     for (var platformFile in selectedFiles) {
       final fileName = platformFile.name;
       final fileSize = "${(platformFile.size / 1024).toStringAsFixed(2)} KB";
@@ -187,20 +191,31 @@ class _FileUploadPageState extends State<FileUploadPage> {
         continue;
       }
 
-      final fileIndex = files.length;
+      newFiles.add({
+        "name": fileName,
+        "size": fileSize,
+        "progress": 0.0,
+        "status": "uploading",
+        "file": file,
+        "fileType": fileType,
+        "taskId": null, // 업로드 시작 후 서버에서 받은 taskId
+      });
+    }
+
+    // 모든 파일을 한 번에 추가
+    if (newFiles.isNotEmpty) {
       setState(() {
-        files.add({
-          "name": fileName,
-          "size": fileSize,
-          "progress": 0.0,
-          "status": "uploading",
-          "file": file,
-          "fileType": fileType,
-          "taskId": null, // 업로드 시작 후 서버에서 받은 taskId
-        });
+        files.addAll(newFiles);
       });
 
-      _uploadFile(fileIndex, file, fileType);
+      // 모든 파일을 동시에 업로드 시작
+      final startIndex = files.length - newFiles.length;
+      for (int i = 0; i < newFiles.length; i++) {
+        final fileIndex = startIndex + i;
+        final file = newFiles[i]["file"] as File;
+        final fileType = newFiles[i]["fileType"] as String;
+        _uploadFile(fileIndex, file, fileType); // await 없이 호출하여 동시 업로드
+      }
     }
   }
 
@@ -407,47 +422,65 @@ class _FileUploadPageState extends State<FileUploadPage> {
                         type: _determineUploadType(file["name"]),
                         onDownload: () async {
                           final taskId = file["taskId"];
-                          if (taskId != null) {
-                            try {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('${file["name"]} 다운로드를 시작합니다.'),
-                                  duration: const Duration(seconds: 2),
-                                ),
-                              );
-                              
-                              final savedPath = await _fileService.downloadFile(
-                                taskId.toString(),
-                                file["name"],
-                              );
-                              
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('파일이 저장되었습니다: $savedPath'),
-                                    backgroundColor: Colors.green,
-                                    duration: const Duration(seconds: 3),
-                                  ),
-                                );
-                              }
-                            } catch (e) {
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('다운로드 실패: ${e.toString().replaceAll('Exception: ', '')}'),
-                                    backgroundColor: Colors.red,
-                                    duration: const Duration(seconds: 3),
-                                  ),
-                                );
-                              }
-                            }
-                          } else {
+                          final status = file["status"]?.toString() ?? '';
+                          
+                          print('다운로드 버튼 클릭: taskId=$taskId, status=$status, fileName=${file["name"]}');
+                          
+                          if (taskId == null || taskId.toString().isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('다운로드할 수 없는 파일입니다.'),
+                                content: Text('업로드가 완료되지 않아 다운로드할 수 없습니다.'),
                                 backgroundColor: Colors.orange,
                               ),
                             );
+                            return;
+                          }
+                          
+                          if (status != 'done') {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('파일이 아직 처리 중입니다. (상태: $status)'),
+                                backgroundColor: Colors.orange,
+                              ),
+                            );
+                            return;
+                          }
+                          
+                          try {
+                            print('다운로드 시작: taskId=$taskId, fileName=${file["name"]}');
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('${file["name"]} 다운로드를 시작합니다.'),
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                            
+                            final savedPath = await _fileService.downloadFile(
+                              taskId.toString(),
+                              file["name"],
+                            );
+                            
+                            print('다운로드 완료: $savedPath');
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('파일이 저장되었습니다: $savedPath'),
+                                  backgroundColor: Colors.green,
+                                  duration: const Duration(seconds: 3),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            print('다운로드 실패: $e');
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('다운로드 실패: ${e.toString().replaceAll('Exception: ', '')}'),
+                                  backgroundColor: Colors.red,
+                                  duration: const Duration(seconds: 3),
+                                ),
+                              );
+                            }
                           }
                         },
                         onDelete: () {
