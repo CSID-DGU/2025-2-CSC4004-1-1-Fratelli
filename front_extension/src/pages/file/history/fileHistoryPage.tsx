@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 
 import FilterButton from "../../../components/file/history/filterButton"
 import {
@@ -50,6 +50,34 @@ const FileHistoryPage = ({
     )
   }
 
+  const loadFiles = useCallback(async () => {
+    setIsLoading(true)
+    setErrorMessage(null)
+
+    try {
+      const type =
+        selectedTab === 1 ? "image" : selectedTab === 2 ? "video" : undefined
+
+      const fetchedFiles = await getFiles(type)
+      
+      // 파일이 있을 때만 로그 출력
+      if (fetchedFiles.length > 0) {
+        console.log("[FileHistoryPage] 파일 목록 요청 - 타입:", type)
+        console.log("[FileHistoryPage] 받아온 파일 개수:", fetchedFiles.length)
+      }
+      setFiles(fetchedFiles)
+      setIsLoading(false)
+    } catch (e) {
+      console.error("[FileHistoryPage] 파일 목록 불러오기 실패:", e)
+      setIsLoading(false)
+      setErrorMessage(
+        e instanceof Error
+          ? e.message.replace("Exception: ", "")
+          : "파일을 불러오는데 실패했습니다."
+      )
+    }
+  }, [selectedTab])
+
   useEffect(() => {
     if (!isLoggedIn) {
       setFiles([])
@@ -59,7 +87,21 @@ const FileHistoryPage = ({
     }
 
     loadFiles()
-  }, [selectedTab, refreshTrigger, isLoggedIn])
+  }, [selectedTab, refreshTrigger, isLoggedIn, loadFiles])
+
+  // 히스토리 탭이 활성화되어 있을 때 주기적으로 새로고침
+  useEffect(() => {
+    if (!isLoggedIn) {
+      return
+    }
+
+    // 30초마다 자동 새로고침 (과도한 요청 방지)
+    const interval = setInterval(() => {
+      loadFiles()
+    }, 30000)
+
+    return () => clearInterval(interval)
+  }, [isLoggedIn, loadFiles])
 
   useEffect(() => {
     if (logoutVersion !== undefined) {
@@ -68,27 +110,6 @@ const FileHistoryPage = ({
       setErrorMessage(null)
     }
   }, [logoutVersion])
-
-  const loadFiles = async () => {
-    setIsLoading(true)
-    setErrorMessage(null)
-
-    try {
-      const type =
-        selectedTab === 1 ? "image" : selectedTab === 2 ? "video" : undefined
-
-      const fetchedFiles = await getFiles(type)
-      setFiles(fetchedFiles)
-      setIsLoading(false)
-    } catch (e) {
-      setIsLoading(false)
-      setErrorMessage(
-        e instanceof Error
-          ? e.message.replace("Exception: ", "")
-          : "파일을 불러오는데 실패했습니다."
-      )
-    }
-  }
 
   const deleteFile = async (taskId: string, index: number) => {
     try {

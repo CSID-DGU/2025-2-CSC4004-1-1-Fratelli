@@ -25,9 +25,14 @@ const HomePage = () => {
         const user = await getUser()
         setIsLoggedIn(true)
         setUserEmail(user.email)
-      } catch {
+      } catch (error) {
+        console.error("[HomePage] 인증 초기화 실패:", error)
         setIsLoggedIn(false)
         setUserEmail(undefined)
+        // 403 에러인 경우 토큰 삭제
+        if (error instanceof Error && error.message.includes("권한")) {
+          // 토큰이 있지만 권한이 없는 경우, 토큰을 삭제하고 로그인 페이지로
+        }
       } finally {
         setIsInitializing(false)
       }
@@ -82,18 +87,19 @@ const HomePage = () => {
     try {
       await quit()
       alert("회원 탈퇴가 완료되었습니다.")
+      // 성공한 경우에만 상태 초기화
+      setIsLoggedIn(false)
+      setUserEmail(undefined)
+      setLogoutVersion((prev) => prev + 1)
+      setCurrentTab("upload")
     } catch (e) {
       alert(
         `회원 탈퇴에 실패했습니다: ${
           e instanceof Error ? e.message : "알 수 없는 오류"
         }`
       )
+      // 실패한 경우 상태 유지 (로그인 상태 유지)
     } finally {
-      setIsLoggedIn(false)
-      setUserEmail(undefined)
-      // 회원 탈퇴 후에도 작업 목록/히스토리 초기화
-      setLogoutVersion((prev) => prev + 1)
-      setCurrentTab("upload")
       setShowDeleteAccountModal(false)
     }
   }
@@ -180,7 +186,15 @@ const HomePage = () => {
             }}>
             <FileUploadPage
               onUploadSuccess={() => {
+                // 업로드 성공 후 즉시 새로고침
                 setRefreshHistory((prev) => prev + 1)
+                // 백엔드 처리 시간을 고려하여 지연 후 추가 새로고침
+                setTimeout(() => {
+                  setRefreshHistory((prev) => prev + 1)
+                }, 2000) // 2초 후
+                setTimeout(() => {
+                  setRefreshHistory((prev) => prev + 1)
+                }, 5000) // 5초 후
               }}
               logoutVersion={logoutVersion}
             />
