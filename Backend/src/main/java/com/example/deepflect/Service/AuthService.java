@@ -165,14 +165,14 @@ public class AuthService {
         return newTokens;
     }
 
-    public boolean deleteToken(String accessToken) {
+    public boolean deleteByEmail(String email) {
 //        Optional<UserTokens> userToken = userTokenRepository.findByAccessToken(token);
 //        System.out.println("=====================================================");
 //        System.out.println(userToken.get().getTokenId());
 //        System.out.println("=====================================================");
 
         // DB에서 토큰 조회
-        Optional<UserTokens> userTokenOpt = userTokenRepository.findByAccessToken(accessToken);
+        Optional<UserTokens> userTokenOpt = userTokenRepository.findByUser_Email(email);
 
         if (userTokenOpt.isPresent()) {
             UserTokens userToken = userTokenOpt.get();
@@ -187,7 +187,7 @@ public class AuthService {
             log.info("로그아웃 완료: {}", user.getEmail());
             return true;
         } else {
-            log.warn("DB에서 토큰을 찾을 수 없음: {}", accessToken);
+            log.warn("DB에서 이메일을 찾을 수 없음: {}", email);
             return false;
         }
     }

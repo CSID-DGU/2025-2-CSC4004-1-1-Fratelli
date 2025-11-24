@@ -37,6 +37,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.Map;
 
@@ -46,6 +48,9 @@ public class FileController {
 
     @Autowired
     UsersRepository usersRepository;
+
+    @Autowired
+    com.example.deepflect.Repository.FilesRepository filesRepository;
 
     @Autowired
     FileService fileService;
@@ -252,6 +257,11 @@ public class FileController {
     public ResponseEntity<FileUploadListResponse> getUploads(
             @RequestParam(value = "type", required = false) FileType type) {
 
+        // 현재 로그인한 사용자 이메일 가져오기
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        UserDetails userDetails = (UserDetails) auth.getPrincipal();
+        String currentUserEmail = userDetails.getUsername();
+
         var uploads = uploadProgressService.listUploads();
 
         // 진행률 기반 상태 및 progress 업데이트
@@ -269,6 +279,11 @@ public class FileController {
                 }
             }
         }
+
+        // 0차 필터링 : 로그인한 사용자의 파일만 출력
+        uploads = uploads.stream()
+                .filter(u -> u.getUserEmail() != null && u.getUserEmail().equals(currentUserEmail))
+                .collect(java.util.stream.Collectors.toList());
 
         // 1차 필터링 : 업로드 중(UPLOADING)인 것만 출력
         uploads = uploads.stream()
@@ -289,6 +304,10 @@ public class FileController {
     @GetMapping
     public ResponseEntity<FileListResponse> listFiles(@RequestParam(value = "type", required = false) FileType type) {
         try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            UserDetails userDetails = (UserDetails) auth.getPrincipal();
+            String currentUserEmail = userDetails.getUsername();
+
             // [수정] outputDir 변수 사용
             File outputsFolder = new File(outputDir);
 
@@ -296,8 +315,9 @@ public class FileController {
             System.out.println("========== [DEBUG] listFiles 시작 ==========");
             System.out.println("설정된 outputDir 값: " + outputDir);
             System.out.println("설정된 outputsFolder 값: " + outputsFolder);
+            System.out.println("현재 로그인한 사용자: " + currentUserEmail);
 
-            java.util.List<FilesDTO> filesList = new java.util.ArrayList<>();
+            List<FilesDTO> filesList = new ArrayList<>();
 
             if (outputsFolder.exists() && outputsFolder.isDirectory()) {
                 File[] files = outputsFolder.listFiles((dir, name) -> name.contains("_protected."));
@@ -306,6 +326,21 @@ public class FileController {
                     for (File f : files) {
                         String fileName = f.getName();
                         String taskId = fileName.substring(0, fileName.indexOf("_protected"));
+
+                        // 사용자 필터링: DB에서 taskId로 Files 엔티티 조회하여 사용자 확인
+                        Files fileEntity = filesRepository.findByTaskId(taskId);
+//                        System.out.println("[DEBUG] taskId: " + taskId + ", fileEntity: " + fileEntity +
+//                                         ", userEmail: " + (fileEntity != null && fileEntity.getUser() != null ?
+//                                                          fileEntity.getUser().getEmail() : "null"));
+                        
+                        if (fileEntity == null || fileEntity.getUser() == null || 
+                            !fileEntity.getUser().getEmail().equals(currentUserEmail)) {
+//                            System.out.println("[DEBUG] 필터링됨: taskId=" + taskId +
+//                                             ", fileUserEmail=" + (fileEntity != null && fileEntity.getUser() != null ?
+//                                                                  fileEntity.getUser().getEmail() : "null") +
+//                                             ", currentEmail=" + currentUserEmail);
+                            continue; // 다른 사용자의 파일은 건너뛰기
+                        }
 
                         // 파일 타입 감지 (enum 변환 로직 간소화 가능)
                         String nameLower = fileName.toLowerCase();

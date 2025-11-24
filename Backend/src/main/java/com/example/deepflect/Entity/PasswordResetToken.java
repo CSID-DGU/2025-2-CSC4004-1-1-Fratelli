@@ -21,7 +21,9 @@ public class PasswordResetToken {
 
     private String token;
 
-    @OneToOne
+    private boolean used;
+
+    @OneToOne(cascade = CascadeType.REMOVE)
     @JoinColumn(name = "user_num", nullable = false)
     private Users user;
 

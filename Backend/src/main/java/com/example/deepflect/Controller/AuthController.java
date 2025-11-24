@@ -81,10 +81,13 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<LogoutResponse> logout(@RequestBody LogoutRequest logoutRequest) {
-        String token = logoutRequest.getToken();
+    public ResponseEntity<LogoutResponse> logout() {
+//        String token = logoutRequest.getToken();
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        UserDetails userDetails = (UserDetails) auth.getPrincipal();
+        String currentUserEmail = userDetails.getUsername();
 
-        boolean isDeleted = authService.deleteToken(token);
+        boolean isDeleted = authService.deleteByEmail(currentUserEmail);
 
         if (isDeleted) {
             return ResponseEntity.ok(new LogoutResponse("Logout success", 200));
@@ -136,6 +139,15 @@ public class AuthController {
         return ResponseEntity.ok("비밀번호 재설정 이메일이 발송되었습니다.");
     }
 
+    @GetMapping("/password-reset")
+    public ResponseEntity<String> showResetPasswordPage(@RequestParam("token") String token) {
+        boolean isValid = passwordResetService.validateToken(token);
+        if (!isValid) {
+            return ResponseEntity.badRequest().body("유효하지 않은 토큰입니다.");
+        }
+        // 토큰이 유효하면 비밀번호 재설정 페이지 표시
+        return ResponseEntity.ok("비밀번호 재설정 페이지 표시");
+    }
 
     @DeleteMapping("/quit")
     public ResponseEntity<?> deleteUser() {
