@@ -22,28 +22,26 @@ _$UserInfoImpl _$$UserInfoImplFromJson(Map<String, dynamic> json) =>
     _$UserInfoImpl(
       id: (json['id'] as num).toInt(),
       email: json['email'] as String,
-      nickname: json['nickname'] as String,
     );
 
 Map<String, dynamic> _$$UserInfoImplToJson(_$UserInfoImpl instance) =>
     <String, dynamic>{
       'id': instance.id,
       'email': instance.email,
-      'nickname': instance.nickname,
     };
 
 _$LoginResponseImpl _$$LoginResponseImplFromJson(Map<String, dynamic> json) =>
     _$LoginResponseImpl(
       accessToken: json['accessToken'] as String,
       refreshToken: json['refreshToken'] as String,
-      accessTokenExpiresAt: json['accessTokenExpiresAt'] as String,
-      refreshTokenExpiresAt: json['refreshTokenExpiresAt'] as String,
+      userInfo: json['userInfo'] == null
+          ? null
+          : UserInfo.fromJson(json['userInfo'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$$LoginResponseImplToJson(_$LoginResponseImpl instance) =>
     <String, dynamic>{
       'accessToken': instance.accessToken,
       'refreshToken': instance.refreshToken,
-      'accessTokenExpiresAt': instance.accessTokenExpiresAt,
-      'refreshTokenExpiresAt': instance.refreshTokenExpiresAt,
+      'userInfo': instance.userInfo,
     };

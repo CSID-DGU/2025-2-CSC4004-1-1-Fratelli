@@ -190,7 +190,6 @@ UserInfo _$UserInfoFromJson(Map<String, dynamic> json) {
 mixin _$UserInfo {
   int get id => throw _privateConstructorUsedError;
   String get email => throw _privateConstructorUsedError;
-  String get nickname => throw _privateConstructorUsedError;
 
   /// Serializes this UserInfo to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -207,7 +206,7 @@ abstract class $UserInfoCopyWith<$Res> {
   factory $UserInfoCopyWith(UserInfo value, $Res Function(UserInfo) then) =
       _$UserInfoCopyWithImpl<$Res, UserInfo>;
   @useResult
-  $Res call({int id, String email, String nickname});
+  $Res call({int id, String email});
 }
 
 /// @nodoc
@@ -227,7 +226,6 @@ class _$UserInfoCopyWithImpl<$Res, $Val extends UserInfo>
   $Res call({
     Object? id = null,
     Object? email = null,
-    Object? nickname = null,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -237,10 +235,6 @@ class _$UserInfoCopyWithImpl<$Res, $Val extends UserInfo>
       email: null == email
           ? _value.email
           : email // ignore: cast_nullable_to_non_nullable
-              as String,
-      nickname: null == nickname
-          ? _value.nickname
-          : nickname // ignore: cast_nullable_to_non_nullable
               as String,
     ) as $Val);
   }
@@ -254,7 +248,7 @@ abstract class _$$UserInfoImplCopyWith<$Res>
       __$$UserInfoImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({int id, String email, String nickname});
+  $Res call({int id, String email});
 }
 
 /// @nodoc
@@ -272,7 +266,6 @@ class __$$UserInfoImplCopyWithImpl<$Res>
   $Res call({
     Object? id = null,
     Object? email = null,
-    Object? nickname = null,
   }) {
     return _then(_$UserInfoImpl(
       id: null == id
@@ -283,10 +276,6 @@ class __$$UserInfoImplCopyWithImpl<$Res>
           ? _value.email
           : email // ignore: cast_nullable_to_non_nullable
               as String,
-      nickname: null == nickname
-          ? _value.nickname
-          : nickname // ignore: cast_nullable_to_non_nullable
-              as String,
     ));
   }
 }
@@ -294,8 +283,7 @@ class __$$UserInfoImplCopyWithImpl<$Res>
 /// @nodoc
 @JsonSerializable()
 class _$UserInfoImpl implements _UserInfo {
-  const _$UserInfoImpl(
-      {required this.id, required this.email, required this.nickname});
+  const _$UserInfoImpl({required this.id, required this.email});
 
   factory _$UserInfoImpl.fromJson(Map<String, dynamic> json) =>
       _$$UserInfoImplFromJson(json);
@@ -304,12 +292,10 @@ class _$UserInfoImpl implements _UserInfo {
   final int id;
   @override
   final String email;
-  @override
-  final String nickname;
 
   @override
   String toString() {
-    return 'UserInfo(id: $id, email: $email, nickname: $nickname)';
+    return 'UserInfo(id: $id, email: $email)';
   }
 
   @override
@@ -318,14 +304,12 @@ class _$UserInfoImpl implements _UserInfo {
         (other.runtimeType == runtimeType &&
             other is _$UserInfoImpl &&
             (identical(other.id, id) || other.id == id) &&
-            (identical(other.email, email) || other.email == email) &&
-            (identical(other.nickname, nickname) ||
-                other.nickname == nickname));
+            (identical(other.email, email) || other.email == email));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, id, email, nickname);
+  int get hashCode => Object.hash(runtimeType, id, email);
 
   /// Create a copy of UserInfo
   /// with the given fields replaced by the non-null parameter values.
@@ -345,9 +329,7 @@ class _$UserInfoImpl implements _UserInfo {
 
 abstract class _UserInfo implements UserInfo {
   const factory _UserInfo(
-      {required final int id,
-      required final String email,
-      required final String nickname}) = _$UserInfoImpl;
+      {required final int id, required final String email}) = _$UserInfoImpl;
 
   factory _UserInfo.fromJson(Map<String, dynamic> json) =
       _$UserInfoImpl.fromJson;
@@ -356,8 +338,6 @@ abstract class _UserInfo implements UserInfo {
   int get id;
   @override
   String get email;
-  @override
-  String get nickname;
 
   /// Create a copy of UserInfo
   /// with the given fields replaced by the non-null parameter values.
@@ -375,8 +355,7 @@ LoginResponse _$LoginResponseFromJson(Map<String, dynamic> json) {
 mixin _$LoginResponse {
   String get accessToken => throw _privateConstructorUsedError;
   String get refreshToken => throw _privateConstructorUsedError;
-  String get accessTokenExpiresAt => throw _privateConstructorUsedError;
-  String get refreshTokenExpiresAt => throw _privateConstructorUsedError;
+  UserInfo? get userInfo => throw _privateConstructorUsedError;
 
   /// Serializes this LoginResponse to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -394,11 +373,9 @@ abstract class $LoginResponseCopyWith<$Res> {
           LoginResponse value, $Res Function(LoginResponse) then) =
       _$LoginResponseCopyWithImpl<$Res, LoginResponse>;
   @useResult
-  $Res call(
-      {String accessToken,
-      String refreshToken,
-      String accessTokenExpiresAt,
-      String refreshTokenExpiresAt});
+  $Res call({String accessToken, String refreshToken, UserInfo? userInfo});
+
+  $UserInfoCopyWith<$Res>? get userInfo;
 }
 
 /// @nodoc
@@ -418,8 +395,7 @@ class _$LoginResponseCopyWithImpl<$Res, $Val extends LoginResponse>
   $Res call({
     Object? accessToken = null,
     Object? refreshToken = null,
-    Object? accessTokenExpiresAt = null,
-    Object? refreshTokenExpiresAt = null,
+    Object? userInfo = freezed,
   }) {
     return _then(_value.copyWith(
       accessToken: null == accessToken
@@ -430,15 +406,25 @@ class _$LoginResponseCopyWithImpl<$Res, $Val extends LoginResponse>
           ? _value.refreshToken
           : refreshToken // ignore: cast_nullable_to_non_nullable
               as String,
-      accessTokenExpiresAt: null == accessTokenExpiresAt
-          ? _value.accessTokenExpiresAt
-          : accessTokenExpiresAt // ignore: cast_nullable_to_non_nullable
-              as String,
-      refreshTokenExpiresAt: null == refreshTokenExpiresAt
-          ? _value.refreshTokenExpiresAt
-          : refreshTokenExpiresAt // ignore: cast_nullable_to_non_nullable
-              as String,
+      userInfo: freezed == userInfo
+          ? _value.userInfo
+          : userInfo // ignore: cast_nullable_to_non_nullable
+              as UserInfo?,
     ) as $Val);
+  }
+
+  /// Create a copy of LoginResponse
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $UserInfoCopyWith<$Res>? get userInfo {
+    if (_value.userInfo == null) {
+      return null;
+    }
+
+    return $UserInfoCopyWith<$Res>(_value.userInfo!, (value) {
+      return _then(_value.copyWith(userInfo: value) as $Val);
+    });
   }
 }
 
@@ -450,11 +436,10 @@ abstract class _$$LoginResponseImplCopyWith<$Res>
       __$$LoginResponseImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call(
-      {String accessToken,
-      String refreshToken,
-      String accessTokenExpiresAt,
-      String refreshTokenExpiresAt});
+  $Res call({String accessToken, String refreshToken, UserInfo? userInfo});
+
+  @override
+  $UserInfoCopyWith<$Res>? get userInfo;
 }
 
 /// @nodoc
@@ -472,8 +457,7 @@ class __$$LoginResponseImplCopyWithImpl<$Res>
   $Res call({
     Object? accessToken = null,
     Object? refreshToken = null,
-    Object? accessTokenExpiresAt = null,
-    Object? refreshTokenExpiresAt = null,
+    Object? userInfo = freezed,
   }) {
     return _then(_$LoginResponseImpl(
       accessToken: null == accessToken
@@ -484,14 +468,10 @@ class __$$LoginResponseImplCopyWithImpl<$Res>
           ? _value.refreshToken
           : refreshToken // ignore: cast_nullable_to_non_nullable
               as String,
-      accessTokenExpiresAt: null == accessTokenExpiresAt
-          ? _value.accessTokenExpiresAt
-          : accessTokenExpiresAt // ignore: cast_nullable_to_non_nullable
-              as String,
-      refreshTokenExpiresAt: null == refreshTokenExpiresAt
-          ? _value.refreshTokenExpiresAt
-          : refreshTokenExpiresAt // ignore: cast_nullable_to_non_nullable
-              as String,
+      userInfo: freezed == userInfo
+          ? _value.userInfo
+          : userInfo // ignore: cast_nullable_to_non_nullable
+              as UserInfo?,
     ));
   }
 }
@@ -500,10 +480,7 @@ class __$$LoginResponseImplCopyWithImpl<$Res>
 @JsonSerializable()
 class _$LoginResponseImpl implements _LoginResponse {
   const _$LoginResponseImpl(
-      {required this.accessToken,
-      required this.refreshToken,
-      required this.accessTokenExpiresAt,
-      required this.refreshTokenExpiresAt});
+      {required this.accessToken, required this.refreshToken, this.userInfo});
 
   factory _$LoginResponseImpl.fromJson(Map<String, dynamic> json) =>
       _$$LoginResponseImplFromJson(json);
@@ -513,13 +490,11 @@ class _$LoginResponseImpl implements _LoginResponse {
   @override
   final String refreshToken;
   @override
-  final String accessTokenExpiresAt;
-  @override
-  final String refreshTokenExpiresAt;
+  final UserInfo? userInfo;
 
   @override
   String toString() {
-    return 'LoginResponse(accessToken: $accessToken, refreshToken: $refreshToken, accessTokenExpiresAt: $accessTokenExpiresAt, refreshTokenExpiresAt: $refreshTokenExpiresAt)';
+    return 'LoginResponse(accessToken: $accessToken, refreshToken: $refreshToken, userInfo: $userInfo)';
   }
 
   @override
@@ -531,16 +506,14 @@ class _$LoginResponseImpl implements _LoginResponse {
                 other.accessToken == accessToken) &&
             (identical(other.refreshToken, refreshToken) ||
                 other.refreshToken == refreshToken) &&
-            (identical(other.accessTokenExpiresAt, accessTokenExpiresAt) ||
-                other.accessTokenExpiresAt == accessTokenExpiresAt) &&
-            (identical(other.refreshTokenExpiresAt, refreshTokenExpiresAt) ||
-                other.refreshTokenExpiresAt == refreshTokenExpiresAt));
+            (identical(other.userInfo, userInfo) ||
+                other.userInfo == userInfo));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, accessToken, refreshToken,
-      accessTokenExpiresAt, refreshTokenExpiresAt);
+  int get hashCode =>
+      Object.hash(runtimeType, accessToken, refreshToken, userInfo);
 
   /// Create a copy of LoginResponse
   /// with the given fields replaced by the non-null parameter values.
@@ -562,8 +535,7 @@ abstract class _LoginResponse implements LoginResponse {
   const factory _LoginResponse(
       {required final String accessToken,
       required final String refreshToken,
-      required final String accessTokenExpiresAt,
-      required final String refreshTokenExpiresAt}) = _$LoginResponseImpl;
+      final UserInfo? userInfo}) = _$LoginResponseImpl;
 
   factory _LoginResponse.fromJson(Map<String, dynamic> json) =
       _$LoginResponseImpl.fromJson;
@@ -573,9 +545,7 @@ abstract class _LoginResponse implements LoginResponse {
   @override
   String get refreshToken;
   @override
-  String get accessTokenExpiresAt;
-  @override
-  String get refreshTokenExpiresAt;
+  UserInfo? get userInfo;
 
   /// Create a copy of LoginResponse
   /// with the given fields replaced by the non-null parameter values.

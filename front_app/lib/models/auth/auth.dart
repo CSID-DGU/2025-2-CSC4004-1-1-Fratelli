@@ -18,7 +18,6 @@ class UserInfo with _$UserInfo {
   const factory UserInfo({
     required int id,
     required String email,
-    required String nickname,
   }) = _UserInfo;
 
   factory UserInfo.fromJson(Map<String, dynamic> json) =>
@@ -30,8 +29,7 @@ class LoginResponse with _$LoginResponse {
   const factory LoginResponse({
     required String accessToken,
     required String refreshToken,
-    required String accessTokenExpiresAt,
-    required String refreshTokenExpiresAt,
+    UserInfo? userInfo,
   }) = _LoginResponse;
 
   factory LoginResponse.fromJson(Map<String, dynamic> json) =>
