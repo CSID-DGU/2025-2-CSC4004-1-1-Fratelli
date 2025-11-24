@@ -10,6 +10,7 @@ export interface UploadFileResponse {
   taskId: string
   fileName: string
   fileType: FileType
+  userEmail: string
   status: string
   progress?: number
   message?: string
@@ -72,26 +73,36 @@ const authFetchWithRefresh = async (
   await ensureFreshAccessToken()
 
   const firstHeaders = await createAuthHeaders(init.headers || {})
-  let response = await fetch(url, {
-    ...init,
-    headers: firstHeaders
-  })
+  
+  try {
+    let response = await fetch(url, {
+      ...init,
+      headers: firstHeaders
+    })
 
-  if (response.status === 401) {
-    try {
-      await refreshToken()
-    } catch {
-      return response
+    if (response.status === 401) {
+      try {
+        await refreshToken()
+      } catch {
+        return response
+      }
+
+      const retryHeaders = await createAuthHeaders(init.headers || {})
+      response = await fetch(url, {
+        ...init,
+        headers: retryHeaders
+      })
     }
 
-    const retryHeaders = await createAuthHeaders(init.headers || {})
-    response = await fetch(url, {
-      ...init,
-      headers: retryHeaders
-    })
+    return response
+  } catch (error) {
+    // 네트워크 에러나 CORS 에러 처리
+    if (error instanceof TypeError && error.message.includes("fetch")) {
+      console.error("네트워크 요청 실패:", error)
+      throw new Error("네트워크 연결에 실패했습니다. 서버가 실행 중인지 확인해주세요.")
+    }
+    throw error
   }
-
-  return response
 }
 
 export const uploadFile = async (
@@ -137,6 +148,7 @@ export const uploadFile = async (
     taskId,
     fileName: file.name,
     fileType: type,
+    userEmail: "",
     status: "uploading",
     progress: 0,
     message: undefined,
@@ -204,6 +216,12 @@ export const getFiles = async (type?: FileType): Promise<FileListItem[]> => {
     }
 
     const data = (await response.json()) as FileListResponse
+
+    // 디버그 모드에서만 로그 출력
+    if (process.env.NODE_ENV === "development" && data.files?.length > 0) {
+      console.log("[getFiles] 백엔드 응답:", data)
+      console.log("[getFiles] 파일 개수:", data.files?.length || 0)
+    }
 
     const mapped: FileListItem[] = data.files.map((file) => {
       const rawType = (file.fileType || "").toString().toLowerCase()

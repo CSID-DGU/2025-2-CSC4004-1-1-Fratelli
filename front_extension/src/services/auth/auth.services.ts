@@ -82,6 +82,10 @@ export const getUser = async (): Promise<UserInfoResponse> => {
       throw new Error("로그인이 필요합니다.")
     }
 
+    console.log("[getUser] 요청 URL:", `${API_BASE_URL}/api/v1/auth/user`)
+    console.log("[getUser] 토큰 존재:", !!token)
+    console.log("[getUser] 토큰 앞부분:", token.substring(0, 50) + "...")
+
     const response = await fetch(`${API_BASE_URL}/api/v1/auth/user`, {
       method: "GET",
       headers: {
@@ -90,21 +94,48 @@ export const getUser = async (): Promise<UserInfoResponse> => {
       }
     })
 
+    console.log("[getUser] 응답 상태:", response.status)
+    console.log("[getUser] 응답 헤더:", Object.fromEntries(response.headers.entries()))
+
     return response
   }
 
   let response = await makeRequest()
 
+  // 403 에러는 백엔드 JWT 필터 문제일 가능성이 높음 - 토큰 갱신 시도하지 않음
+  if (response.status === 403) {
+    console.error("[getUser] 403 Forbidden - 백엔드 JWT 필터가 /api/v1/auth/user를 검증하려고 시도하는 것 같습니다.")
+    console.error("[getUser] 백엔드 JWT 필터에서 /api/v1/auth/** 경로를 스킵하도록 수정이 필요합니다.")
+    throw new Error("백엔드 권한 설정 문제입니다. 백엔드 개발자에게 문의하세요.")
+  }
+
+  // 401 에러만 토큰 갱신 시도
   if (response.status === 401) {
     try {
+      // 토큰 갱신 시도
       await refreshToken()
       response = await makeRequest()
-    } catch {
+      
+      // 갱신 후에도 여전히 401이면 로그인 필요
+      if (response.status === 401) {
+        throw new Error("인증이 만료되었습니다. 다시 로그인해주세요.")
+      }
+    } catch (error) {
+      // refreshToken 실패 또는 갱신 후에도 실패
+      if (error instanceof Error) {
+        throw error
+      }
       throw new Error("인증이 만료되었습니다. 다시 로그인해주세요.")
     }
   }
 
   if (!response.ok) {
+    if (response.status === 403) {
+      throw new Error("접근 권한이 없습니다. 다시 로그인해주세요.")
+    }
+    if (response.status === 401) {
+      throw new Error("인증이 만료되었습니다. 다시 로그인해주세요.")
+    }
     throw new Error("사용자 정보를 불러오는데 실패했습니다.")
   }
 
@@ -203,12 +234,17 @@ export const refreshToken = async (): Promise<void> => {
   const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${refreshTokenValue}`
     },
     body: JSON.stringify(payload)
   })
 
   if (!response.ok) {
+    if (response.status === 403) {
+      console.error("[refreshToken] 403 Forbidden - 백엔드 JWT 필터가 /api/v1/auth/refresh를 검증하려고 시도하는 것 같습니다.")
+      throw new Error("토큰 재발급 권한이 없습니다. 다시 로그인해주세요.")
+    }
     try {
       const errorData = await response.json()
       const message =
@@ -317,31 +353,67 @@ export const logout = async () => {
 }
 
 export const quit = async () => {
-  try {
-    const makeRequest = async () => {
-      const token = await getToken()
-      return await fetch(`${API_BASE_URL}/api/v1/auth/quit`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        }
-      })
+  await ensureFreshAccessToken()
+
+  const performRequest = async () => {
+    const token = await getToken()
+
+    if (!token) {
+      throw new Error("로그인이 필요합니다.")
     }
 
-    let response = await makeRequest()
+    return await fetch(`${API_BASE_URL}/api/v1/auth/quit`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      }
+    })
+  }
+
+  try {
+    let response = await performRequest()
+
+    console.log("[quit] 응답 상태:", response.status)
+
+    // 403 에러는 백엔드 JWT 필터 문제일 가능성이 높음
+    if (response.status === 403) {
+      console.error("[quit] 403 Forbidden - 백엔드 JWT 필터가 /api/v1/auth/quit를 검증하려고 시도하는 것 같습니다.")
+      throw new Error("회원탈퇴 권한이 없습니다. 백엔드 설정을 확인해주세요.")
+    }
 
     if (response.status === 401) {
       try {
         await refreshToken()
-        response = await makeRequest()
+        response = await performRequest()
+        console.log("[quit] 토큰 갱신 후 응답 상태:", response.status)
       } catch {
         await clearToken()
-        return
+        throw new Error("인증이 만료되었습니다. 다시 로그인해주세요.")
       }
     }
-  } finally {
+
+    // 응답 상태 확인
+    if (!response.ok) {
+      // 실패 시 토큰 유지 (회원탈퇴 실패했으므로)
+      try {
+        const errorData = await response.json()
+        const message =
+          errorData?.message ||
+          errorData?.error ||
+          `회원탈퇴에 실패했습니다. (상태 코드: ${response.status})`
+        throw new Error(message)
+      } catch {
+        throw new Error(`회원탈퇴에 실패했습니다. (상태 코드: ${response.status})`)
+      }
+    }
+
+    console.log("[quit] 회원탈퇴 성공")
+    // 성공한 경우에만 토큰 삭제
     await clearToken()
+    return
+  } catch (error) {
+    throw error
   }
 }
 
