@@ -124,9 +124,8 @@ class ApiService {
       print('리프레시 토큰으로 액세스 토큰 재발급 시도');
       final refreshResponse = await _dio.post(
         '/api/v1/auth/refresh',
-        data: {
-          'refreshToken': refreshToken,
-        },
+        options: Options( headers: {'Authorization': 'Bearer $refreshToken',},),
+        // data: {'refreshToken': refreshToken,},
       );
 
       print('리프레시 응답 상태 코드: ${refreshResponse.statusCode}');

@@ -261,17 +261,26 @@ class FileService {
       if (response.statusCode == 200) {
         final responseData = response.data;
         if (responseData is Map<String, dynamic>) {
-          // 명세에 따라 downloadUrl 필드 사용
-          final url = responseData['downloadUrl'];
+          // 여러 가능한 필드명 확인
+          final url = responseData['downloadUrl'] ?? 
+                     responseData['url'] ?? 
+                     responseData['download_url'] ??
+                     responseData['fileUrl'] ??
+                     responseData['file_url'];
+          
           if (url is String && url.isNotEmpty) {
+            print('다운로드 URL 획득: $url');
             return url;
           } else {
-            throw Exception('다운로드 URL이 응답에 없습니다.');
+            print('다운로드 URL 필드를 찾을 수 없습니다. 응답 데이터: $responseData');
+            throw Exception('다운로드 URL이 응답에 없습니다. 파일이 아직 처리 중일 수 있습니다.');
           }
         } else {
+          print('서버 응답이 Map이 아닙니다. 타입: ${responseData.runtimeType}, 데이터: $responseData');
           throw Exception('서버 응답 형식이 올바르지 않습니다.');
         }
       } else {
+        print('다운로드 URL 요청 실패: 상태 코드 ${response.statusCode}, 메시지: ${response.statusMessage}');
         throw Exception('다운로드 실패: ${response.statusMessage}');
       }
     } on DioException catch (e) {
@@ -296,6 +305,8 @@ class FileService {
   // 결과 파일 다운로드 및 저장
   Future<String> downloadFile(String taskId, String fileName) async {
     try {
+      print('파일 다운로드 시작: taskId=$taskId, fileName=$fileName');
+      
       // 다운로드 URL 가져오기
       var downloadUrl = await getDownloadUrl(taskId);
       
@@ -303,13 +314,16 @@ class FileService {
         throw Exception('다운로드 URL을 가져올 수 없습니다.');
       }
 
-      // 상대 URL
+      print('다운로드 URL (원본): $downloadUrl');
+
+      // 상대 URL 처리
       if (!downloadUrl.startsWith('http://') && !downloadUrl.startsWith('https://')) {
-        String baseUrl = 'http://localhost:3000';
+        String baseUrl = 'http://localhost:8080';
         try {
           final apiHost = dotenv.env['API_HOST'];
           if (apiHost != null && apiHost.isNotEmpty) {
             baseUrl = apiHost;
+            print('환경 변수에서 API 호스트 로드: $baseUrl');
           }
         } catch (e) {
           print('dotenv 접근 실패, 기본 URL 사용: $e');
@@ -318,6 +332,7 @@ class FileService {
           downloadUrl = '/$downloadUrl';
         }
         downloadUrl = '$baseUrl$downloadUrl';
+        print('다운로드 URL (절대 경로): $downloadUrl');
       }
 
       // 저장소 권한 요청
@@ -345,7 +360,9 @@ class FileService {
       final dio = Dio();
       
       final savePath = '${directory.path}/$fileName';
+      print('파일 저장 경로: $savePath');
 
+      print('파일 다운로드 요청 시작: $downloadUrl');
       final response = await dio.download(
         downloadUrl,
         savePath,
@@ -354,9 +371,17 @@ class FileService {
               ? {'Authorization': 'Bearer $accessToken'}
               : {},
         ),
+        onReceiveProgress: (received, total) {
+          if (total != -1) {
+            final progress = (received / total * 100).toStringAsFixed(1);
+            print('다운로드 진행률: $progress% ($received/$total bytes)');
+          }
+        },
       );
 
+      print('다운로드 응답 상태 코드: ${response.statusCode}');
       if (response.statusCode == 200) {
+        print('파일 다운로드 성공: $savePath');
         return savePath;
       } else {
         throw Exception('파일 다운로드 실패: ${response.statusMessage}');
