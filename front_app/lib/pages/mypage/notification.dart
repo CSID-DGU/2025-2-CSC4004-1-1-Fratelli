@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:deepflect_app/services/notification_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class NotificationItem {
   final String taskId;
@@ -46,7 +47,8 @@ class NotificationScreen extends StatefulWidget {
   State<NotificationScreen> createState() => _NotificationScreenState();
 }
 
-class _NotificationScreenState extends State<NotificationScreen> with WidgetsBindingObserver {
+class _NotificationScreenState extends State<NotificationScreen>
+    with WidgetsBindingObserver {
   final NotificationService _notificationService = NotificationService();
   List<NotificationItem> notifications = [];
   bool isDeleteMode = false;
@@ -54,12 +56,19 @@ class _NotificationScreenState extends State<NotificationScreen> with WidgetsBin
   bool isAllSelected = false;
   bool _isLoading = true;
   String? _errorMessage;
+  bool _autoCleanup = true;
+  static const String _autoCleanupKey = 'notification_auto_cleanup';
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _loadNotifications();
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    await _loadAutoCleanupSetting();
+    await _loadNotifications();
   }
 
   @override
@@ -88,6 +97,9 @@ class _NotificationScreenState extends State<NotificationScreen> with WidgetsBin
       // API 응답을 NotificationItem으로 변환
       final loaded = response.map((json) => NotificationItem.fromJson(json)).toList();
       
+      // 3일 이상된 알림 정리
+      await _cleanupOldNotifications(loaded);
+      
       loaded.sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
       if (mounted) {
@@ -106,9 +118,47 @@ class _NotificationScreenState extends State<NotificationScreen> with WidgetsBin
     }
   }
 
+  Future<void> _loadAutoCleanupSetting() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _autoCleanup = prefs.getBool(_autoCleanupKey) ?? true;
+    });
+  }
+
+  Future<void> _cleanupOldNotifications(List<NotificationItem> items) async {
+    if (!_autoCleanup) return;
+    final nowUtc = DateTime.now().toUtc();
+    final List<NotificationItem> expired = [];
+
+    for (final item in items) {
+      DateTime? created;
+      try {
+        created = DateTime.parse(item.timestamp).toUtc();
+      } catch (_) {
+        continue;
+      }
+
+      if (nowUtc.difference(created) > const Duration(days: 3)) {
+        expired.add(item);
+      }
+    }
+
+    if (expired.isEmpty) return;
+
+    for (final item in expired) {
+      try {
+        await _notificationService.deleteNotification(item.taskId);
+      } catch (e) {
+        debugPrint('만료 알림 삭제 실패(${item.taskId}): $e');
+      }
+    }
+
+    items.removeWhere((item) => expired.any((exp) => exp.taskId == item.taskId));
+  }
+
   // 날짜 형식 변환
   String _formatDate(String dateStr) {
-    final date = DateTime.parse(dateStr);
+    final date = DateTime.parse(dateStr).toUtc().add(const Duration(hours: 9));
     final y = date.year;
     final m = date.month.toString().padLeft(2, '0');
     final d = date.day.toString().padLeft(2, '0');
@@ -252,10 +302,10 @@ class _NotificationScreenState extends State<NotificationScreen> with WidgetsBin
                     ),
                   ),
                   const Spacer(),
-                  if (isDeleteMode)
+                  if (isDeleteMode) ...[
+                    const SizedBox(width: 12),
                     Column(
                       mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         GestureDetector(
                           onTap: _toggleSelectAll,
@@ -294,6 +344,7 @@ class _NotificationScreenState extends State<NotificationScreen> with WidgetsBin
                         ),
                       ],
                     ),
+                  ],
                 ],
               ),
             ],
