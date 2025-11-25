@@ -96,9 +96,14 @@ public class AuthController {
         }
     }
 
-    @GetMapping("/user/{userNum}")
-    public ResponseEntity<Users> getUserByNum(@PathVariable("userNum") Long userNum) {
-        Optional<Users> userOptional = queryService.findByUserNum(userNum);
+    @GetMapping("/user")
+    public ResponseEntity<Users> getUserByNum() {
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        UserDetails userDetails = (UserDetails) auth.getPrincipal();
+        String currentUserEmail = userDetails.getUsername();
+
+        Optional<Users> userOptional = usersRepository.findByEmail(currentUserEmail);
 
         if (userOptional.isPresent()) {
             return ResponseEntity.ok(userOptional.get());
@@ -115,12 +120,14 @@ public class AuthController {
 //            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 //        }
 
-        String email = updateUserRequest.getEmail(); // email로 JWT 인증
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        UserDetails userDetails = (UserDetails) auth.getPrincipal();
+        String currentUserEmail = userDetails.getUsername();
         System.out.println("-------------------------------------------------");
-        System.out.println(email);
+        System.out.println(currentUserEmail);
         System.out.println("-------------------------------------------------");
 
-        Optional<Users> userOptional = usersRepository.findByEmail(email);
+        Optional<Users> userOptional = usersRepository.findByEmail(currentUserEmail);
 
         if (userOptional.isPresent()) {
             Users user = authService.getNewUserInfo(updateUserRequest, userOptional);

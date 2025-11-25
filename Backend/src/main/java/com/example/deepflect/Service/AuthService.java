@@ -18,6 +18,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -215,10 +216,17 @@ public class AuthService {
 //                }
 //                user.setEmail(updateUserRequest.getEmail());
 //            }
-        if (updateUserRequest.getPassword() != null) user.setPassword(updateUserRequest.getPassword());
+        if (updateUserRequest.getPassword() != null) {
+            user.setPassword(updateUserRequest.getPassword());
+            user.setUpdatedAt(LocalDateTime.now());
+        }
         // 다른 업데이트 필드 필요 시 추가
-        if (updateUserRequest.getUserName() != null) user.setUserName(updateUserRequest.getUserName());
+        if (updateUserRequest.getUserName() != null) {
+            user.setUserName(updateUserRequest.getUserName());
+            user.setUpdatedAt(LocalDateTime.now());
+        }
         return user;
+
     }
 //    public boolean deleteToken(String email) {
 //        Optional<UserToken> userToken = userTokenRepository.findByEmail(email);
