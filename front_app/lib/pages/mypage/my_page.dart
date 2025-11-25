@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:deepflect_app/widgets/mypage/upload_statistics.dart';
 import 'package:deepflect_app/pages/mypage/edit_account.dart';
 import 'package:deepflect_app/models/auth/auth_provider.dart';
+import 'package:deepflect_app/models/auth/user_provider.dart';
 import 'package:deepflect_app/pages/login/login.dart';
 import 'package:deepflect_app/pages/mypage/delete_account.dart';
 import 'package:deepflect_app/pages/mypage/notification.dart';
@@ -181,33 +182,91 @@ class _MyPageState extends ConsumerState<MyPage> {
                   ),
                   const SizedBox(height: 28),
                   // 사용자 정보 (프로필 아이콘 + 이메일)
-                  Row(
-                    children: [
-                      // 프로필 아이콘
-                      Container(
-                        width: 35,
-                        height: 35,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(100),
+                  ref.watch(userInfoProvider).when(
+                    data: (userInfo) => Row(
+                      children: [
+                        // 프로필 아이콘
+                        Container(
+                          width: 35,
+                          height: 35,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(100),
+                          ),
+                          child: const Icon(
+                            Icons.account_box,
+                            color: Color(0xFF27005D),
+                            size: 24,
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.account_box,
-                          color: Color(0xFF27005D),
-                          size: 24,
+                        const SizedBox(width: 12),
+                        // 이메일
+                        Text(
+                          userInfo?.email ?? '이메일 없음',
+                          style: GoogleFonts.k2d(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      // 이메일
-                      Text(
-                        'email@example.com',
-                        style: GoogleFonts.k2d(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white,
+                      ],
+                    ),
+                    loading: () => Row(
+                      children: [
+                        // 프로필 아이콘
+                        Container(
+                          width: 35,
+                          height: 35,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(100),
+                          ),
+                          child: const Icon(
+                            Icons.account_box,
+                            color: Color(0xFF27005D),
+                            size: 24,
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 12),
+                        // 로딩 중
+                        const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+                    error: (error, stack) => Row(
+                      children: [
+                        // 프로필 아이콘
+                        Container(
+                          width: 35,
+                          height: 35,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(100),
+                          ),
+                          child: const Icon(
+                            Icons.account_box,
+                            color: Color(0xFF27005D),
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        // 에러 메시지
+                        Text(
+                          '이메일 불러오기 실패',
+                          style: GoogleFonts.k2d(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),

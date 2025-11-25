@@ -152,7 +152,10 @@ class _FileUploadPageState extends State<FileUploadPage> {
           return tid == null || tid.isEmpty;
         }).toList();
 
-        files = [...updatedByTaskId.values, ...orphanLocals];
+        files = [
+          ...updatedByTaskId.values,
+          ...orphanLocals.take(3),
+        ];
       });
     } catch (e) {
       if (!mounted) return;
