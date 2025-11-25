@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -9,7 +10,7 @@ import 'package:deepflect_app/services/file_service.dart';
 
 class FileUploadPage extends StatefulWidget {
   final VoidCallback? onUploadSuccess;
-  
+
   const FileUploadPage({super.key, this.onUploadSuccess});
 
   @override
@@ -25,7 +26,9 @@ class _FileUploadPageState extends State<FileUploadPage> {
     final extension = fileName.toLowerCase().split('.').last;
     if (extension == 'mp4' || extension == 'mp3') {
       return 'VIDEO';
-    } else if (extension == 'jpg' || extension == 'jpeg' || extension == 'png') {
+    } else if (extension == 'jpg' ||
+        extension == 'jpeg' ||
+        extension == 'png') {
       return 'IMAGE';
     }
     return 'IMAGE';
@@ -87,6 +90,7 @@ class _FileUploadPageState extends State<FileUploadPage> {
             "file": null,
             "fileType": item['fileType']?.toString() ?? 'image',
             "taskId": item['taskId']?.toString(),
+            "localId": item['taskId']?.toString(),
           };
         }).toList();
 
@@ -135,13 +139,20 @@ class _FileUploadPageState extends State<FileUploadPage> {
         // 2) 서버 파일들 추가 (기존에 없던 것만)
         for (final serverFile in serverFiles) {
           final tid = serverFile["taskId"]?.toString();
-          if (tid != null && tid.isNotEmpty && !updatedByTaskId.containsKey(tid)) {
+          if (tid != null &&
+              tid.isNotEmpty &&
+              !updatedByTaskId.containsKey(tid)) {
             updatedByTaskId[tid] = serverFile;
           }
         }
 
-        // 3) 최종 병합: taskId가 있는 파일들 + taskId가 없는 로컬 파일들
-        files = [...updatedByTaskId.values, ...localWithoutTaskId];
+        // 3) 최종 병합: taskId가 있는 파일들 + taskId가 여전히 없는 로컬 파일들만 유지
+        final orphanLocals = localWithoutTaskId.where((file) {
+          final tid = file["taskId"]?.toString();
+          return tid == null || tid.isEmpty;
+        }).toList();
+
+        files = [...updatedByTaskId.values, ...orphanLocals];
       });
     } catch (e) {
       if (!mounted) return;
@@ -160,12 +171,12 @@ class _FileUploadPageState extends State<FileUploadPage> {
   Future<void> _onFileSelected(List<PlatformFile> selectedFiles) async {
     // 먼저 모든 파일을 리스트에 추가
     final List<Map<String, dynamic>> newFiles = [];
-    
+
     for (var platformFile in selectedFiles) {
       final fileName = platformFile.name;
       final fileSize = "${(platformFile.size / 1024).toStringAsFixed(2)} KB";
       final fileType = _determineFileType(fileName);
-      
+
       if (platformFile.path == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -191,6 +202,9 @@ class _FileUploadPageState extends State<FileUploadPage> {
         continue;
       }
 
+      final localId =
+          'local-${DateTime.now().microsecondsSinceEpoch}-${files.length}-${platformFile.hashCode}';
+
       newFiles.add({
         "name": fileName,
         "size": fileSize,
@@ -199,6 +213,7 @@ class _FileUploadPageState extends State<FileUploadPage> {
         "file": file,
         "fileType": fileType,
         "taskId": null, // 업로드 시작 후 서버에서 받은 taskId
+        "localId": localId,
       });
     }
 
@@ -209,40 +224,46 @@ class _FileUploadPageState extends State<FileUploadPage> {
       });
 
       // 모든 파일을 동시에 업로드 시작
-      final startIndex = files.length - newFiles.length;
-      for (int i = 0; i < newFiles.length; i++) {
-        final fileIndex = startIndex + i;
-        final file = newFiles[i]["file"] as File;
-        final fileType = newFiles[i]["fileType"] as String;
-        _uploadFile(fileIndex, file, fileType); // await 없이 호출하여 동시 업로드
+      for (final newFile in newFiles) {
+        final file = newFile["file"] as File;
+        final fileType = newFile["fileType"] as String;
+        final localId = newFile["localId"] as String;
+        _uploadFile(localId, file, fileType); // await 없이 호출하여 동시 업로드
       }
     }
   }
 
-  Future<void> _uploadFile(int index, File file, String type) async {
+  Future<void> _uploadFile(String localId, File file, String type) async {
     try {
       final response = await _fileService.uploadFile(file, type);
-      
+
       if (!mounted) return;
 
       setState(() {
-        files[index]["taskId"] = response['taskId']?.toString();
-        files[index]["status"] = "done";
-        files[index]["progress"] = 1.0;
+        final targetIndex =
+            files.indexWhere((element) => element["localId"] == localId);
+        if (targetIndex == -1) return;
+        files[targetIndex]["taskId"] = response['taskId']?.toString();
+        files[targetIndex]["status"] = "done";
+        files[targetIndex]["progress"] = 1.0;
       });
 
       widget.onUploadSuccess?.call();
     } catch (e) {
       if (!mounted) return;
-      
+
       setState(() {
-        files[index]["status"] = "error";
-        files[index]["error"] = e.toString().replaceAll('Exception: ', '');
+        final targetIndex =
+            files.indexWhere((element) => element["localId"] == localId);
+        if (targetIndex == -1) return;
+        files[targetIndex]["status"] = "error";
+        files[targetIndex]["error"] = e.toString().replaceAll('Exception: ', '');
       });
 
+      final failedName = file.path.split('/').last;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('업로드 실패: ${files[index]["name"]}\n${files[index]["error"]}'),
+          content: Text('업로드 실패: $failedName\n${e.toString().replaceAll('Exception: ', '')}'),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 3),
         ),
@@ -278,7 +299,9 @@ class _FileUploadPageState extends State<FileUploadPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('업로드 취소 실패: ${e.toString().replaceAll('Exception: ', '')}'),
+            content: Text(
+              '업로드 취소 실패: ${e.toString().replaceAll('Exception: ', '')}',
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -357,18 +380,13 @@ class _FileUploadPageState extends State<FileUploadPage> {
                 ),
               ),
               const SizedBox(height: 24),
-              FileUploadButton(
-                onFilesSelected: _onFileSelected,
-              ),
+              FileUploadButton(onFilesSelected: _onFileSelected),
               const SizedBox(height: 24),
               // 작업 목록 구분선 및 제목
               Row(
                 children: [
                   Expanded(
-                    child: Container(
-                      height: 1,
-                      color: const Color(0xFFA2A2A2),
-                    ),
+                    child: Container(height: 1, color: const Color(0xFFA2A2A2)),
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -382,10 +400,7 @@ class _FileUploadPageState extends State<FileUploadPage> {
                     ),
                   ),
                   Expanded(
-                    child: Container(
-                      height: 1,
-                      color: const Color(0xFFA2A2A2),
-                    ),
+                    child: Container(height: 1, color: const Color(0xFFA2A2A2)),
                   ),
                 ],
               ),
@@ -396,7 +411,10 @@ class _FileUploadPageState extends State<FileUploadPage> {
                   itemBuilder: (context, index) {
                     final file = files[index];
                     return Dismissible(
-                      key: Key('${file["name"]}_$index'),
+                      key: Key(
+                        (file["taskId"] ?? file["localId"] ?? '${file["name"]}_$index')
+                            .toString(),
+                      ),
                       direction: DismissDirection.endToStart,
                       background: Container(
                         alignment: Alignment.centerRight,
@@ -421,12 +439,31 @@ class _FileUploadPageState extends State<FileUploadPage> {
                         status: _convertStatus(file["status"]),
                         type: _determineUploadType(file["name"]),
                         onDownload: () async {
-                          final taskId = file["taskId"];
+                          final dynamic rawFile = files[index];
+                          if (rawFile is! Map<String, dynamic>) {
+                            debugPrint(
+                              '예상치 못한 파일 데이터: ${rawFile.runtimeType} -> $rawFile',
+                            );
+                            return;
+                          }
+                          final file = rawFile;
+                          final fileData = file["taskId"].toString();
+                          String? taskId;
+                          try {
+                            final Map<String, dynamic> fileDataMap = jsonDecode(
+                              fileData,
+                            );
+                            taskId = fileDataMap["taskId"]?.toString();
+                          } catch (e) {
+                            taskId = file["taskId"]?.toString();
+                          }
                           final status = file["status"]?.toString() ?? '';
-                          
-                          print('다운로드 버튼 클릭: taskId=$taskId, status=$status, fileName=${file["name"]}');
-                          
-                          if (taskId == null || taskId.toString().isEmpty) {
+
+                          print(
+                            '다운로드 버튼 클릭: taskId=$taskId, status=$status, fileName=${file["name"]}',
+                          );
+
+                          if (taskId == null || taskId.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text('업로드가 완료되지 않아 다운로드할 수 없습니다.'),
@@ -435,7 +472,7 @@ class _FileUploadPageState extends State<FileUploadPage> {
                             );
                             return;
                           }
-                          
+
                           if (status != 'done') {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
@@ -445,21 +482,23 @@ class _FileUploadPageState extends State<FileUploadPage> {
                             );
                             return;
                           }
-                          
+
                           try {
-                            print('다운로드 시작: taskId=$taskId, fileName=${file["name"]}');
+                            print(
+                              '다운로드 시작: taskId=$taskId, fileName=${file["name"]}',
+                            );
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text('${file["name"]} 다운로드를 시작합니다.'),
                                 duration: const Duration(seconds: 2),
                               ),
                             );
-                            
+
                             final savedPath = await _fileService.downloadFile(
                               taskId.toString(),
                               file["name"],
                             );
-                            
+
                             print('다운로드 완료: $savedPath');
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -475,7 +514,9 @@ class _FileUploadPageState extends State<FileUploadPage> {
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('다운로드 실패: ${e.toString().replaceAll('Exception: ', '')}'),
+                                  content: Text(
+                                    '다운로드 실패: ${e.toString().replaceAll('Exception: ', '')}',
+                                  ),
                                   backgroundColor: Colors.red,
                                   duration: const Duration(seconds: 3),
                                 ),

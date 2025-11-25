@@ -7,11 +7,50 @@ import 'package:deepflect_app/models/auth/auth_provider.dart';
 import 'package:deepflect_app/pages/login/login.dart';
 import 'package:deepflect_app/pages/mypage/delete_account.dart';
 import 'package:deepflect_app/pages/mypage/notification.dart';
+import 'package:deepflect_app/pages/mypage/notification_setting.dart';
 import 'package:deepflect_app/widgets/mypage/menu_item.dart';
 import 'package:deepflect_app/widgets/mypage/menu_item2.dart';
+import 'package:deepflect_app/services/file_service.dart';
 
-class MyPage extends ConsumerWidget {
+class MyPage extends ConsumerStatefulWidget {
   const MyPage({super.key});
+
+  @override
+  ConsumerState<MyPage> createState() => _MyPageState();
+}
+
+class _MyPageState extends ConsumerState<MyPage> {
+  final FileService _fileService = FileService();
+  int? _photoCount;
+  int? _videoCount;
+  bool _isStatsLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStatistics();
+  }
+
+  Future<void> _loadStatistics() async {
+    try {
+      final photos = await _fileService.getFiles(type: 'image');
+      final videos = await _fileService.getFiles(type: 'video');
+
+      if (!mounted) return;
+      setState(() {
+        _photoCount = photos.length;
+        _videoCount = videos.length;
+        _isStatsLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _photoCount ??= 0;
+        _videoCount ??= 0;
+        _isStatsLoading = false;
+      });
+    }
+  }
 
   void _showLogoutDialog(BuildContext context, WidgetRef ref) {
     showDialog(
@@ -111,7 +150,8 @@ class MyPage extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
+    final ref = this.ref;
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -174,10 +214,19 @@ class MyPage extends ConsumerWidget {
             ),
             Transform.translate(
               offset: const Offset(0, -50),
-              child: const UploadStatistics(
-                photoCount: 3,
-                videoCount: 1,
-              ),
+              child: _isStatsLoading
+                  ? const SizedBox(
+                      height: 110,
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          color: Color(0xFF27005D),
+                        ),
+                      ),
+                    )
+                  : UploadStatistics(
+                      photoCount: _photoCount ?? 0,
+                      videoCount: _videoCount ?? 0,
+                    ),
             ),
             Expanded(
               child: SingleChildScrollView(
@@ -212,7 +261,14 @@ class MyPage extends ConsumerWidget {
                     MenuItem(
                       icon: Icons.settings_outlined,
                       title: '알림 설정',
-                      onTap: () {},
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const NotificationSettingPage(),
+                          ),
+                        );
+                      },
                     ),
                     const SizedBox(height: 24),
                     const Divider(
