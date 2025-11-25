@@ -8,7 +8,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 class FileService {
   late final ApiService _apiService;
-  
+
   FileService() {
     _apiService = ApiService();
   }
@@ -17,14 +17,11 @@ class FileService {
   Future<Map<String, dynamic>> uploadFile(File file, String type) async {
     try {
       print('파일 업로드 요청: ${file.path}, type: $type');
-      
+
       final fileName = file.path.split('/').last;
       // 명세: form-data, key: (파일 필드 하나) → 여기서는 'file' 키로 전송
       final formData = FormData.fromMap({
-        'file': await MultipartFile.fromFile(
-          file.path,
-          filename: fileName,
-        ),
+        'file': await MultipartFile.fromFile(file.path, filename: fileName),
       });
 
       final response = await _apiService.postWithAuth(
@@ -63,10 +60,7 @@ class FileService {
         }
 
         // 그 외(JSON 바디가 없거나 예기치 못한 형식)
-        return {
-          'success': true,
-          'rawResponse': responseData,
-        };
+        return {'success': true, 'rawResponse': responseData};
       } else {
         throw Exception('파일 업로드 실패: ${response.statusMessage}');
       }
@@ -75,7 +69,7 @@ class FileService {
       print('에러 메시지: ${e.message}');
       print('응답 데이터: ${e.response?.data}');
       print('상태 코드: ${e.response?.statusCode}');
-      
+
       if (e.response?.statusCode == 401) {
         throw Exception('인증이 만료되었습니다. 다시 로그인해주세요.');
       } else if (e.response?.statusCode == 400) {
@@ -99,7 +93,7 @@ class FileService {
       final endpoint = type != null
           ? '/api/v1/files/uploads?type=$type'
           : '/api/v1/files/uploads';
-      
+
       final response = await _apiService.getWithAuth(endpoint);
 
       print('응답 상태 코드: ${response.statusCode}');
@@ -107,7 +101,7 @@ class FileService {
 
       if (response.statusCode == 200) {
         final responseData = response.data;
-        // 명세(최신): 
+        // 명세(최신):
         // {
         //   "uploads": [
         //     {
@@ -122,7 +116,8 @@ class FileService {
         // }
         if (responseData is Map<String, dynamic> &&
             responseData['uploads'] is List) {
-          final List<dynamic> uploads = responseData['uploads'] as List<dynamic>;
+          final List<dynamic> uploads =
+              responseData['uploads'] as List<dynamic>;
           return uploads
               .where((item) => item is Map<String, dynamic>)
               .map((item) => item as Map<String, dynamic>)
@@ -138,7 +133,7 @@ class FileService {
       print('에러 메시지: ${e.message}');
       print('응답 데이터: ${e.response?.data}');
       print('상태 코드: ${e.response?.statusCode}');
-      
+
       if (e.response?.statusCode == 401) {
         throw Exception('인증이 만료되었습니다. 다시 로그인해주세요.');
       } else {
@@ -154,7 +149,7 @@ class FileService {
   Future<void> cancelUpload(String taskId) async {
     try {
       print('업로드 취소 요청: $taskId');
-      
+
       final response = await _apiService.deleteWithAuth(
         '/api/v1/files/uploads/$taskId',
       );
@@ -172,7 +167,7 @@ class FileService {
       print('에러 메시지: ${e.message}');
       print('응답 데이터: ${e.response?.data}');
       print('상태 코드: ${e.response?.statusCode}');
-      
+
       if (e.response?.statusCode == 401) {
         throw Exception('인증이 만료되었습니다. 다시 로그인해주세요.');
       } else if (e.response?.statusCode == 404) {
@@ -190,11 +185,11 @@ class FileService {
   Future<List<Map<String, dynamic>>> getFiles({String? type}) async {
     try {
       print('전체 결과 목록 요청, type: $type');
-      
-      final endpoint = type != null 
+
+      final endpoint = type != null
           ? '/api/v1/files?type=$type'
           : '/api/v1/files';
-      
+
       final response = await _apiService.getWithAuth(endpoint);
 
       print('응답 상태 코드: ${response.statusCode}');
@@ -234,7 +229,7 @@ class FileService {
       print('에러 메시지: ${e.message}');
       print('응답 데이터: ${e.response?.data}');
       print('상태 코드: ${e.response?.statusCode}');
-      
+
       if (e.response?.statusCode == 401) {
         throw Exception('인증이 만료되었습니다. 다시 로그인해주세요.');
       } else {
@@ -250,7 +245,7 @@ class FileService {
   Future<String> getDownloadUrl(String taskId) async {
     try {
       print('결과 다운로드 요청: $taskId');
-      
+
       final response = await _apiService.getWithAuth(
         '/api/v1/files/$taskId/download',
       );
@@ -262,13 +257,8 @@ class FileService {
         final responseData = response.data;
         if (responseData is Map<String, dynamic>) {
           // 여러 가능한 필드명 확인
-          final url = responseData['downloadUrl'] ?? 
-                     responseData['url'] ?? 
-                     responseData['download_url'] ??
-                     responseData['fileUrl'] ??
-                     responseData['file_url'];
-          
-          if (url is String && url.isNotEmpty) {
+          final url = responseData['downloadUrl'];
+          if (url != null && url.isNotEmpty) {
             print('다운로드 URL 획득: $url');
             return url;
           } else {
@@ -276,11 +266,15 @@ class FileService {
             throw Exception('다운로드 URL이 응답에 없습니다. 파일이 아직 처리 중일 수 있습니다.');
           }
         } else {
-          print('서버 응답이 Map이 아닙니다. 타입: ${responseData.runtimeType}, 데이터: $responseData');
+          print(
+            '서버 응답이 Map이 아닙니다. 타입: ${responseData.runtimeType}, 데이터: $responseData',
+          );
           throw Exception('서버 응답 형식이 올바르지 않습니다.');
         }
       } else {
-        print('다운로드 URL 요청 실패: 상태 코드 ${response.statusCode}, 메시지: ${response.statusMessage}');
+        print(
+          '다운로드 URL 요청 실패: 상태 코드 ${response.statusCode}, 메시지: ${response.statusMessage}',
+        );
         throw Exception('다운로드 실패: ${response.statusMessage}');
       }
     } on DioException catch (e) {
@@ -288,7 +282,7 @@ class FileService {
       print('에러 메시지: ${e.message}');
       print('응답 데이터: ${e.response?.data}');
       print('상태 코드: ${e.response?.statusCode}');
-      
+
       if (e.response?.statusCode == 401) {
         throw Exception('인증이 만료되었습니다. 다시 로그인해주세요.');
       } else if (e.response?.statusCode == 404) {
@@ -306,10 +300,10 @@ class FileService {
   Future<String> downloadFile(String taskId, String fileName) async {
     try {
       print('파일 다운로드 시작: taskId=$taskId, fileName=$fileName');
-      
+
       // 다운로드 URL 가져오기
       var downloadUrl = await getDownloadUrl(taskId);
-      
+
       if (downloadUrl.isEmpty) {
         throw Exception('다운로드 URL을 가져올 수 없습니다.');
       }
@@ -317,7 +311,8 @@ class FileService {
       print('다운로드 URL (원본): $downloadUrl');
 
       // 상대 URL 처리
-      if (!downloadUrl.startsWith('http://') && !downloadUrl.startsWith('https://')) {
+      if (!downloadUrl.startsWith('http://') &&
+          !downloadUrl.startsWith('https://')) {
         String baseUrl = 'http://localhost:8080';
         try {
           final apiHost = dotenv.env['API_HOST'];
@@ -336,8 +331,9 @@ class FileService {
       }
 
       // 저장소 권한 요청
-      var status = await Permission.storage.request();
-      if (!status.isGranted) {
+      var status = await _ensureStoragePermission();
+      print('저장소 권한 상태: $status');
+      if (!status) {
         throw Exception('저장소 권한이 필요합니다.');
       }
 
@@ -358,7 +354,7 @@ class FileService {
       // 파일 다운로드
       final accessToken = await TokenStorage.getAccessToken();
       final dio = Dio();
-      
+
       final savePath = '${directory.path}/$fileName';
       print('파일 저장 경로: $savePath');
 
@@ -400,8 +396,10 @@ class FileService {
   Future<void> deleteFile(String taskId) async {
     try {
       print('결과 파일 삭제 요청: $taskId');
-      
-      final response = await _apiService.deleteWithAuth('/api/v1/files/$taskId');
+
+      final response = await _apiService.deleteWithAuth(
+        '/api/v1/files/$taskId',
+      );
 
       print('응답 상태 코드: ${response.statusCode}');
       print('응답 데이터: ${response.data}');
@@ -416,7 +414,7 @@ class FileService {
       print('에러 메시지: ${e.message}');
       print('응답 데이터: ${e.response?.data}');
       print('상태 코드: ${e.response?.statusCode}');
-      
+
       if (e.response?.statusCode == 401) {
         throw Exception('인증이 만료되었습니다. 다시 로그인해주세요.');
       } else if (e.response?.statusCode == 404) {
@@ -429,5 +427,25 @@ class FileService {
       throw Exception('알 수 없는 오류가 발생했습니다: $e');
     }
   }
-}
 
+  Future<bool> _ensureStoragePermission() async {
+    if (Platform.isAndroid) {
+      if (Platform.version.compareTo('33') >= 0) {
+        final photos = await Permission.photos.request();
+        final videos = await Permission.videos.request();
+        final audio = await Permission.audio.request();
+        return photos.isGranted || videos.isGranted || audio.isGranted;
+      } else {
+        var status = await Permission.storage.request();
+        if (status.isDenied &&
+            await Permission.manageExternalStorage.isDenied) {
+          status = await Permission.manageExternalStorage.request();
+        }
+        return status.isGranted ||
+            await Permission.manageExternalStorage.isGranted;
+      }
+    }
+    final status = await Permission.storage.request();
+    return status.isGranted;
+  }
+}
