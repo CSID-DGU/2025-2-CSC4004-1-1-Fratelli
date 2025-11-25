@@ -1,6 +1,7 @@
 package com.example.deepflect.Entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -30,7 +31,7 @@ public class Users{
     @Column(name = "user_name", length = 100)
     private String userName;
 
-    private LocalDateTime createdAt;
+    private LocalDateTime createdAt = LocalDateTime.now();
     private LocalDateTime updatedAt;
 
     // 양방향 매핑
@@ -39,11 +40,14 @@ public class Users{
     private UserTokens userTokens;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    @JsonManagedReference
     private List<Files> filesList = new ArrayList<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private List<Device> devices = new ArrayList<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private List<Notification> Notifications = new ArrayList<>();
 }

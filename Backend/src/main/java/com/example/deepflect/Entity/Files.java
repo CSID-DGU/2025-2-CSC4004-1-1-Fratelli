@@ -1,5 +1,6 @@
 package com.example.deepflect.Entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -27,6 +28,7 @@ public class Files {
     private LocalDateTime createdAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JsonBackReference
     @JoinColumn(name = "user_num")
     private Users user;
 
