@@ -35,7 +35,8 @@ const FileUploadPage = ({ onUploadSuccess, logoutVersion }: FileUploadPageProps)
 
   const determineFileType = (fileName: string): UploadType => {
     const extension = fileName.toLowerCase().split(".").pop() || ""
-    if (extension === "mp4" || extension === "mp3") {
+    const videoExtensions = ["mp4", "mov", "mkv", "avi", "webm"]
+    if (videoExtensions.includes(extension)) {
       return UploadType.video
     }
     return UploadType.image

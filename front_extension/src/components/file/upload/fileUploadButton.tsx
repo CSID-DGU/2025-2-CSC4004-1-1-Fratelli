@@ -38,7 +38,7 @@ const FileUploadButton = ({ onFilesSelected }: FileUploadButtonProps) => {
         ref={fileInputRef}
         type="file"
         multiple
-        accept=".jpg,.jpeg,.png,.mp4,.mp3"
+        accept=".jpg,.jpeg,.png,.bmp,.gif,.webp,.mp4,.mov,.mkv,.avi,.webm"
         onChange={handleFileSelect}
         style={{ display: "none" }}
       />
@@ -95,13 +95,13 @@ const FileUploadButton = ({ onFilesSelected }: FileUploadButtonProps) => {
         <span
           style={{
             color: "rgba(39, 0, 93, 0.41)",
-            fontSize: 14,
+            fontSize: 12,
             fontFamily: "'K2D', sans-serif",
             fontWeight: 500,
             lineHeight: 1.22,
             textAlign: "center"
           }}>
-          지원 파일 형식: JPG, PNG, MP4, MP3
+          지원 파일 형식: JPG, JPEG, PNG, MP4, MOV 등
         </span>
       </div>
 
