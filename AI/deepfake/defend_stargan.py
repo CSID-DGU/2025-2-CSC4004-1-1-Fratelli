@@ -657,10 +657,16 @@ def auto_run():
             output_path=DEFAULT_VIDEO_OUT,
             ckpt_path=ckpt_path,
             eps=0.10, 
-            ### 여기서 가중치 세기 수정.
+            ## 가중치 수정
             image_size=128,
             blend_alpha=0.6,
             device="cuda",
+        )
+        # 영상 방어 후 자동 썸네일 생성
+        generate_video_thumbnail(
+            video_path=DEFAULT_VIDEO_OUT,
+            task_id="AUTO_VIDEO",
+            output_folder=DEFAULT_OUTPUT_DIR
         )
     else:
         print(f"[AUTO] 이미지 방어 시작 → {DEFAULT_IMAGE_OUT}")
@@ -674,7 +680,42 @@ def auto_run():
         )
 
     print("[AUTO] 완료!")
+    
+def generate_video_thumbnail(video_path: str, output_folder: str = None) -> str:
+    """
+    변환 완료된 비디오를 열어 첫 프레임을 썸네일(JPG)로 저장합니다.
+    output_folder가 없으면 비디오와 같은 폴더에 저장합니다.
+    """
+    if not os.path.exists(video_path):
+        print(f"[ERR] 썸네일 생성 실패: 파일이 없습니다 -> {video_path}")
+        return None
 
+    try:
+        cap = cv2.VideoCapture(video_path)
+        success, frame = cap.read()
+        cap.release()
+
+        if not success:
+            print("[ERR] 비디오에서 프레임을 읽을 수 없습니다.")
+            return None
+
+        # 파일명 생성: 원본파일명_thumbnail.jpg
+        base_name = os.path.basename(video_path)
+        file_name, _ = os.path.splitext(base_name)
+        
+        # 저장 폴더 설정
+        if output_folder is None:
+            output_folder = os.path.dirname(video_path)
+            
+        save_path = os.path.join(output_folder, f"{file_name}_thumbnail.jpg")
+        
+        cv2.imwrite(save_path, frame)
+        print(f"[INFO] Thumbnail saved: {save_path}")
+        return save_path
+        
+    except Exception as e:
+        print(f"[ERR] Thumbnail generation failed: {e}")
+        return None
 
 # -----------------------------
 # 9) 엔트리 포인트
@@ -701,6 +742,10 @@ if __name__ == "__main__":
                 blend_alpha=args.blend_alpha,
                 device=args.device,
             )
+            # output_path가 파일 경로이므로 폴더만 추출
+            out_dir = os.path.dirname(args.output)
+            generate_video_thumbnail(args.output, out_dir)
+            
         else:
             # 이미지일 경우 output을 protected.jpg로 강제
             out_dir = os.path.dirname(args.output) or "./output"
@@ -715,3 +760,4 @@ if __name__ == "__main__":
                 image_size=args.image_size,
                 device=args.device,
             )
+            
