@@ -4,7 +4,7 @@ import 'package:deepflect_app/services/api_service.dart';
 
 class AuthService {
   late final ApiService _apiService;
-  
+
   AuthService() {
     _apiService = ApiService();
   }
@@ -13,13 +13,10 @@ class AuthService {
   Future<LoginResponse> login(String email, String password) async {
     try {
       print('로그인 시도: $email');
-      
+
       final response = await _apiService.post(
         '/api/v1/auth/login',
-        data: {
-          'email': email,
-          'password': password,
-        },
+        data: {'email': email, 'password': password},
       );
 
       print('응답 상태 코드: ${response.statusCode}');
@@ -43,7 +40,7 @@ class AuthService {
       print('에러 메시지: ${e.message}');
       print('응답 데이터: ${e.response?.data}');
       print('상태 코드: ${e.response?.statusCode}');
-      
+
       if (e.response?.statusCode == 401) {
         throw Exception('이메일 또는 비밀번호가 올바르지 않습니다.');
       } else if (e.response?.statusCode == 400) {
@@ -69,13 +66,10 @@ class AuthService {
       print('회원가입 시도: $email');
       print('회원가입 엔드포인트: /api/v1/auth/register');
       print('요청 데이터: {email: $email, password: [비밀번호 숨김]}');
-      
+
       final response = await _apiService.post(
         '/api/v1/auth/register',
-        data: {
-          'email': email,
-          'password': password,
-        },
+        data: {'email': email, 'password': password},
       );
 
       print('응답 상태 코드: ${response.statusCode}');
@@ -89,32 +83,37 @@ class AuthService {
       } else {
         final responseData = response.data;
         String errorMessage;
-        
-        if (responseData == null || responseData == '' || (responseData is String && responseData.trim().isEmpty)) {
+
+        if (responseData == null ||
+            responseData == '' ||
+            (responseData is String && responseData.trim().isEmpty)) {
           errorMessage = response.statusMessage ?? '알 수 없는 오류';
         } else if (responseData is Map) {
-          errorMessage = responseData['message'] ?? 
-                        responseData['error'] ?? 
-                        responseData['msg'] ??
-                        response.statusMessage ?? 
-                        '알 수 없는 오류';
+          errorMessage =
+              responseData['message'] ??
+              responseData['error'] ??
+              responseData['msg'] ??
+              response.statusMessage ??
+              '알 수 없는 오류';
         } else if (responseData is String && responseData.isNotEmpty) {
           errorMessage = responseData;
         } else {
           errorMessage = response.statusMessage ?? '알 수 없는 오류';
         }
-        
-        print('회원가입 실패 - 상태 코드: ${response.statusCode}, 메시지: $errorMessage, 응답: $responseData');
-        
+
+        print(
+          '회원가입 실패 - 상태 코드: ${response.statusCode}, 메시지: $errorMessage, 응답: $responseData',
+        );
+
         // 상태 코드별 에러 메시지
         if (response.statusCode == 400) {
           throw Exception('입력 정보를 확인해주세요. $errorMessage');
         } else if (response.statusCode == 403) {
           // 403 에러일 때 이메일 중복 메시지 확인
           final lowerErrorMsg = errorMessage.toLowerCase();
-          if (lowerErrorMsg.contains('email') || 
-              lowerErrorMsg.contains('이메일') || 
-              lowerErrorMsg.contains('exist') || 
+          if (lowerErrorMsg.contains('email') ||
+              lowerErrorMsg.contains('이메일') ||
+              lowerErrorMsg.contains('exist') ||
               lowerErrorMsg.contains('already') ||
               lowerErrorMsg.contains('중복') ||
               lowerErrorMsg.contains('존재')) {
@@ -138,32 +137,35 @@ class AuthService {
       }
       print('응답 데이터: ${e.response?.data}');
       print('상태 코드: ${e.response?.statusCode}');
-      
+
       if (e.response?.statusCode == 400) {
         final responseData = e.response?.data;
-        final errorMsg = responseData is Map 
-            ? (responseData['message'] ?? responseData['error'] ?? '입력 정보를 확인해주세요.')
+        final errorMsg = responseData is Map
+            ? (responseData['message'] ??
+                  responseData['error'] ??
+                  '입력 정보를 확인해주세요.')
             : '입력 정보를 확인해주세요.';
         throw Exception(errorMsg);
       } else if (e.response?.statusCode == 403) {
         final responseData = e.response?.data;
         String errorMsg;
         if (responseData is Map) {
-          errorMsg = responseData['message'] ?? 
-                    responseData['error'] ?? 
-                    responseData['msg'] ??
-                    '접근 권한이 없습니다.';
+          errorMsg =
+              responseData['message'] ??
+              responseData['error'] ??
+              responseData['msg'] ??
+              '접근 권한이 없습니다.';
         } else if (responseData is String && responseData.isNotEmpty) {
           errorMsg = responseData;
         } else {
           errorMsg = '접근 권한이 없습니다.';
         }
-        
+
         // 403 에러일 때 이메일 중복 메시지 확인
         final lowerErrorMsg = errorMsg.toLowerCase();
-        if (lowerErrorMsg.contains('email') || 
-            lowerErrorMsg.contains('이메일') || 
-            lowerErrorMsg.contains('exist') || 
+        if (lowerErrorMsg.contains('email') ||
+            lowerErrorMsg.contains('이메일') ||
+            lowerErrorMsg.contains('exist') ||
             lowerErrorMsg.contains('already') ||
             lowerErrorMsg.contains('중복') ||
             lowerErrorMsg.contains('존재')) {
@@ -199,7 +201,7 @@ class AuthService {
   Future<void> logout() async {
     try {
       print('로그아웃 요청');
-      
+
       final response = await _apiService.postWithAuth('/api/v1/auth/logout');
 
       print('응답 상태 코드: ${response.statusCode}');
@@ -227,7 +229,7 @@ class AuthService {
       print('에러 메시지: ${e.message}');
       print('응답 데이터: ${e.response?.data}');
       print('상태 코드: ${e.response?.statusCode}');
-      
+
       if (e.response?.statusCode == 401) {
         throw Exception('인증이 만료되었습니다.');
       } else {
@@ -243,7 +245,7 @@ class AuthService {
   Future<UserInfo> getMe() async {
     try {
       print('사용자 정보 요청');
-      
+
       final response = await _apiService.getWithAuth('/api/v1/auth/user');
 
       print('응답 상태 코드: ${response.statusCode}');
@@ -251,11 +253,7 @@ class AuthService {
 
       if (response.statusCode == 200) {
         final responseData = response.data;
-        if (responseData['success'] == true && responseData['data'] != null) {
-          return UserInfo.fromJson(responseData['data']);
-        } else {
-          throw Exception('서버 응답 형식이 올바르지 않습니다.');
-        }
+        return UserInfo.fromJson(responseData);
       } else {
         throw Exception('사용자 정보 조회 실패: ${response.statusMessage}');
       }
@@ -264,7 +262,7 @@ class AuthService {
       print('에러 메시지: ${e.message}');
       print('응답 데이터: ${e.response?.data}');
       print('상태 코드: ${e.response?.statusCode}');
-      
+
       if (e.response?.statusCode == 401) {
         throw Exception('인증이 만료되었습니다. 다시 로그인해주세요.');
       } else {
@@ -280,7 +278,7 @@ class AuthService {
   Future<UserInfo> updateUser(Map<String, dynamic> userData) async {
     try {
       print('회원 정보 수정 요청');
-      
+
       final response = await _apiService.patchWithAuth(
         '/api/v1/auth/user',
         data: userData,
@@ -293,10 +291,7 @@ class AuthService {
         final responseData = response.data;
         if (responseData is Map<String, dynamic> &&
             responseData['email'] is String) {
-          return UserInfo(
-            id: 0,
-            email: responseData['email'] as String,
-          );
+          return UserInfo(userNum: 0, email: responseData['email'] as String);
         } else {
           throw Exception('서버 응답 형식이 올바르지 않습니다.');
         }
@@ -308,7 +303,7 @@ class AuthService {
       print('에러 메시지: ${e.message}');
       print('응답 데이터: ${e.response?.data}');
       print('상태 코드: ${e.response?.statusCode}');
-      
+
       if (e.response?.statusCode == 401) {
         throw Exception('인증이 만료되었습니다. 다시 로그인해주세요.');
       } else if (e.response?.statusCode == 400) {
@@ -326,13 +321,13 @@ class AuthService {
   Future<void> quit() async {
     try {
       print('회원탈퇴 요청');
-      
+
       final makeRequest = () async {
         return await _apiService.deleteWithAuth('/api/v1/auth/quit');
       };
-      
+
       var response = await makeRequest();
-      
+
       // 401 에러 시 토큰 갱신 후 재시도
       if (response.statusCode == 401) {
         try {
@@ -359,7 +354,7 @@ class AuthService {
       print('에러 메시지: ${e.message}');
       print('응답 데이터: ${e.response?.data}');
       print('상태 코드: ${e.response?.statusCode}');
-      
+
       if (e.response?.statusCode == 401) {
         throw Exception('인증이 만료되었습니다. 다시 로그인해주세요.');
       } else {
@@ -375,12 +370,10 @@ class AuthService {
   Future<void> registerDevice(String fcmToken) async {
     try {
       print('디바이스 등록 요청');
-      
+
       final response = await _apiService.postWithAuth(
         '/api/v1/auth/device',
-        data: {
-          'fcmToken': fcmToken,
-        },
+        data: {'fcmToken': fcmToken},
       );
 
       print('응답 상태 코드: ${response.statusCode}');
@@ -401,7 +394,7 @@ class AuthService {
       print('에러 메시지: ${e.message}');
       print('응답 데이터: ${e.response?.data}');
       print('상태 코드: ${e.response?.statusCode}');
-      
+
       if (e.response?.statusCode == 401) {
         throw Exception('인증이 만료되었습니다. 다시 로그인해주세요.');
       } else {
@@ -417,12 +410,10 @@ class AuthService {
   Future<void> deleteDevice(String fcmToken) async {
     try {
       print('디바이스 삭제 요청');
-      
+
       final response = await _apiService.deleteWithAuth(
         '/api/v1/auth/device',
-        data: {
-          'fcmToken': fcmToken,
-        },
+        data: {'fcmToken': fcmToken},
       );
 
       print('응답 상태 코드: ${response.statusCode}');
@@ -439,7 +430,7 @@ class AuthService {
       print('에러 메시지: ${e.message}');
       print('응답 데이터: ${e.response?.data}');
       print('상태 코드: ${e.response?.statusCode}');
-      
+
       if (e.response?.statusCode == 401) {
         throw Exception('인증이 만료되었습니다. 다시 로그인해주세요.');
       } else {
@@ -450,6 +441,7 @@ class AuthService {
       throw Exception('알 수 없는 오류가 발생했습니다: $e');
     }
   }
+
   // 비밀번호 재설정 요청
   Future<void> passwordReset(String email) async {
     try {
@@ -457,9 +449,7 @@ class AuthService {
 
       final response = await _apiService.post(
         '/api/v1/auth/password-reset',
-        data: {
-          'email': email,
-        },
+        data: {'email': email},
       );
 
       print('응답 상태 코드: ${response.statusCode}');
@@ -473,7 +463,8 @@ class AuthService {
         String errorMessage;
 
         if (responseData is Map) {
-          errorMessage = responseData['message'] ??
+          errorMessage =
+              responseData['message'] ??
               responseData['error'] ??
               response.statusMessage ??
               '알 수 없는 오류';
@@ -484,7 +475,8 @@ class AuthService {
         }
 
         throw Exception(
-            '비밀번호 재설정 요청 실패 (${response.statusCode}): $errorMessage');
+          '비밀번호 재설정 요청 실패 (${response.statusCode}): $errorMessage',
+        );
       }
     } on DioException catch (e) {
       print('DioException 발생: ${e.type}');
@@ -514,9 +506,7 @@ class AuthService {
 
       final response = await _apiService.post(
         '/api/v1/auth/refresh',
-        data: {
-          'refreshToken': refreshToken,
-        },
+        data: {'refreshToken': refreshToken},
       );
 
       print('응답 상태 코드: ${response.statusCode}');
