@@ -19,7 +19,12 @@ class _FileSelectButtonState extends State<FileUploadButton> {
     final result = await FilePicker.platform.pickFiles(
       allowMultiple: true,
       type: FileType.custom,
-      allowedExtensions: ['jpg', 'png', 'mp4'],
+      allowedExtensions: [
+        // 비디오
+        'mp4', 'mov', 'mkv', 'avi', 'webm',
+        // 이미지
+        'jpg', 'jpeg', 'png', 'bmp', 'gif', 'webp',
+      ],
     );
 
     setState(() => _isLoading = false);
@@ -83,10 +88,10 @@ class _FileSelectButtonState extends State<FileUploadButton> {
             ),
             const SizedBox(height: 10),
             const Text(
-              '지원 파일 형식: JPG, PNG, MP4, MP3',
+              '지원 파일 형식: JPG, JPEG, PNG, MP4, MOV 등',
               style: TextStyle(
                 color: Color(0x6827005D),
-                fontSize: 16,
+                fontSize: 12,
                 fontFamily: 'K2D',
                 fontWeight: FontWeight.w500,
                 height: 1.22,

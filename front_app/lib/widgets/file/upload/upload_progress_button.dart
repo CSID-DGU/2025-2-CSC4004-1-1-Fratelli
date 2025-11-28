@@ -135,52 +135,54 @@ class UploadProgressButton extends StatelessWidget {
 
           Positioned(
             left: 52,
-            right: 70,
+            right: status == UploadStatus.done ? 100 : 120,
             top: status == UploadStatus.uploading ? 15 : 22,
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    fileName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Color(0xFF1D0523),
-                      fontSize: 13,
-                      fontFamily: 'K2D',
-                      fontWeight: FontWeight.w500,
-                      height: 1.69,
-                    ),
-                  ),
+            child: Text(
+              fileName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Color(0xFF1D0523),
+                fontSize: 13,
+                fontFamily: 'K2D',
+                fontWeight: FontWeight.w500,
+                height: 1.69,
+              ),
+            ),
+          ),
+          
+          Positioned(
+            left: status == UploadStatus.done ? null : 200,
+            right: status == UploadStatus.done ? 50 : null,
+            top: status == UploadStatus.uploading ? 15 : 22,
+            child: Transform.translate(
+              offset: const Offset(0, 2),
+              child: Text(
+                fileSize,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Color(0xFFA2A2A2),
+                  fontSize: 10,
+                  fontFamily: 'K2D',
+                  fontWeight: FontWeight.w500,
+                  height: 2.20,
                 ),
-                const SizedBox(width: 6),
-                Text(
-                  fileSize,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFFA2A2A2),
-                    fontSize: 10,
-                    fontFamily: 'K2D',
-                    fontWeight: FontWeight.w500,
-                    height: 2.20,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
 
           if (progressText != null)
             Positioned(
               right: 14,
-              top: 20,
+              top: 16,
               child: progressText,
             ),
 
           if (rightIcon != null)
             Positioned(
               right: 8,
-              top: 14,
+              top: 10,
               child: rightIcon,
             ),
 

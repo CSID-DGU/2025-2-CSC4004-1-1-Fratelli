@@ -24,11 +24,12 @@ class _FileUploadPageState extends State<FileUploadPage> {
 
   String _determineFileType(String fileName) {
     final extension = fileName.toLowerCase().split('.').last;
-    if (extension == 'mp4' || extension == 'mp3') {
+    const videoExtensions = ['mp4', 'mov', 'mkv', 'avi', 'webm'];
+    if (videoExtensions.contains(extension)) {
       return 'VIDEO';
-    } else if (extension == 'jpg' ||
-        extension == 'jpeg' ||
-        extension == 'png') {
+    }
+    const imageExtensions = ['jpg', 'jpeg', 'png', 'bmp', 'gif', 'webp'];
+    if (imageExtensions.contains(extension)) {
       return 'IMAGE';
     }
     return 'IMAGE';
@@ -68,8 +69,6 @@ class _FileUploadPageState extends State<FileUploadPage> {
             progress = 1.0;
           }
 
-          final progressStatus = item['progressStatus']?.toString();
-
           final String mappedStatus;
           if (rawStatus == 'success') {
             mappedStatus = 'done';
@@ -84,7 +83,7 @@ class _FileUploadPageState extends State<FileUploadPage> {
             "name": item['fileName']?.toString() ?? '',
             "size": formattedSize,
             "progress": progress,
-            "progressStatus": progressStatus,
+            "progressStatus": item['progressStatus']?.toString(),
             "status": mappedStatus,
             "file": null,
             "fileType": item['fileType']?.toString() ?? 'image',
@@ -93,73 +92,52 @@ class _FileUploadPageState extends State<FileUploadPage> {
           };
         }).toList();
 
-        final Map<String, Map<String, dynamic>> serverByTaskId = {
-          for (final f in serverFiles)
-            if ((f["taskId"] ?? '').toString().isNotEmpty)
-              f["taskId"]!.toString(): f,
-        };
+        final serverTaskIds = serverFiles
+            .map((e) => e['taskId'].toString())
+            .toSet();
 
-        final Map<String, Map<String, dynamic>> updatedByTaskId = {};
-        final List<Map<String, dynamic>> localWithoutTaskId = [];
+        final serverFileNames = serverFiles
+            .map((e) => e['name'].toString().trim().toLowerCase())
+            .toSet();
 
-        for (final local in files) {
-          final localTaskId = local["taskId"]?.toString();
+        final List<Map<String, dynamic>> keptLocalFiles = [];
 
-          if (localTaskId == null || localTaskId.isEmpty) {
-            localWithoutTaskId.add(local);
+        for (final oldFile in files) {
+          final oldTaskId = oldFile['taskId']?.toString();
+          final oldName = oldFile['name']?.toString().trim().toLowerCase() ?? '';
+          
+          if (oldTaskId != null && serverTaskIds.contains(oldTaskId)) {
             continue;
           }
 
-          final serverFile = serverByTaskId[localTaskId];
-
-          if (serverFile == null && local["status"] == "uploading") {
-            updatedByTaskId[localTaskId] = {
-              ...local,
-              "status": "done",
-              "progress": 1.0,
-            };
-          } else if (serverFile != null) {
-            updatedByTaskId[localTaskId] = {
-              ...local,
-              "status": serverFile["status"],
-              "progress": serverFile["progress"],
-              "progressStatus": serverFile["progressStatus"],
-            };
-          } else {
-            updatedByTaskId[localTaskId] = local;
+          if (serverFileNames.contains(oldName)) {
+            continue;
           }
-        }
 
-        for (final serverFile in serverFiles) {
-          final tid = serverFile["taskId"]?.toString();
-          if (tid != null &&
-              tid.isNotEmpty &&
-              !updatedByTaskId.containsKey(tid)) {
-            updatedByTaskId[tid] = serverFile;
+          if (oldTaskId != null && !serverTaskIds.contains(oldTaskId)) {
+            if (oldFile['status'] != 'error') {
+              keptLocalFiles.add({
+                ...oldFile,
+                "status": "done",
+                "progress": 1.0,
+                "progressStatus": null,
+              });
+            } else {
+              keptLocalFiles.add(oldFile);
+            }
+            continue;
           }
-        }
 
-        final orphanLocals = localWithoutTaskId.where((file) {
-          final tid = file["taskId"]?.toString();
-          return tid == null || tid.isEmpty;
-        }).toList();
+          keptLocalFiles.add(oldFile);
+        }
 
         files = [
-          ...updatedByTaskId.values,
-          ...orphanLocals.take(3),
+          ...serverFiles,      
+          ...keptLocalFiles,   
         ];
       });
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '업로드 중인 파일 목록을 불러오지 못했습니다: '
-            '${e.toString().replaceAll('Exception: ', '')}',
-          ),
-          backgroundColor: Colors.orange,
-        ),
-      );
     }
   }
 
@@ -231,16 +209,19 @@ class _FileUploadPageState extends State<FileUploadPage> {
       final response = await _fileService.uploadFile(file, type);
 
       if (!mounted) return;
-
+      
+      final taskId = response['taskId']?.toString();
+      
       setState(() {
         final targetIndex =
             files.indexWhere((element) => element["localId"] == localId);
-        if (targetIndex == -1) return;
-        files[targetIndex]["taskId"] = response['taskId']?.toString();
-        files[targetIndex]["status"] = "done";
-        files[targetIndex]["progress"] = 1.0;
+        if (targetIndex != -1 && taskId != null) {
+          files[targetIndex]["taskId"] = taskId;
+        }
       });
 
+      await _loadUploadingFiles();
+      
       widget.onUploadSuccess?.call();
     } catch (e) {
       if (!mounted) return;
@@ -317,7 +298,10 @@ class _FileUploadPageState extends State<FileUploadPage> {
 
   UploadType _determineUploadType(String fileName) {
     final extension = fileName.toLowerCase().split('.').last;
-    if (extension == 'mp4' || extension == 'mp3') return UploadType.video;
+    const videoExtensions = ['mp4', 'mov', 'mkv', 'avi', 'webm'];
+    if (videoExtensions.contains(extension)) {
+      return UploadType.video;
+    }
     return UploadType.image;
   }
 
@@ -369,7 +353,7 @@ class _FileUploadPageState extends State<FileUploadPage> {
                 "노이즈를 추가할 파일을 업로드해주세요",
                 style: GoogleFonts.k2d(
                   fontSize: 14,
-                  color: Color(0xFF9400FF),
+                  color: Color(0x6827005D),
                 ),
               ),
               const SizedBox(height: 24),
@@ -434,9 +418,6 @@ class _FileUploadPageState extends State<FileUploadPage> {
                         onDownload: () async {
                           final dynamic rawFile = files[index];
                           if (rawFile is! Map<String, dynamic>) {
-                            debugPrint(
-                              '예상치 못한 파일 데이터: ${rawFile.runtimeType} -> $rawFile',
-                            );
                             return;
                           }
                           final file = rawFile;
@@ -451,10 +432,6 @@ class _FileUploadPageState extends State<FileUploadPage> {
                             taskId = file["taskId"]?.toString();
                           }
                           final status = file["status"]?.toString() ?? '';
-
-                          print(
-                            '다운로드 버튼 클릭: taskId=$taskId, status=$status, fileName=${file["name"]}',
-                          );
 
                           if (taskId == null || taskId.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -477,9 +454,6 @@ class _FileUploadPageState extends State<FileUploadPage> {
                           }
 
                           try {
-                            print(
-                              '다운로드 시작: taskId=$taskId, fileName=${file["name"]}',
-                            );
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text('${file["name"]} 다운로드를 시작합니다.'),
@@ -492,7 +466,6 @@ class _FileUploadPageState extends State<FileUploadPage> {
                               file["name"],
                             );
 
-                            print('다운로드 완료: $savedPath');
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
@@ -503,7 +476,6 @@ class _FileUploadPageState extends State<FileUploadPage> {
                               );
                             }
                           } catch (e) {
-                            print('다운로드 실패: $e');
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
