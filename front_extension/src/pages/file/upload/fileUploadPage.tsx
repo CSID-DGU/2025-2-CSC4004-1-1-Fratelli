@@ -17,6 +17,7 @@ interface FileItem {
   name: string
   size: string
   progress: number
+  progressStatus?: string
   status: UploadStatus
   fileType: UploadType
   file?: File
@@ -44,25 +45,44 @@ const FileUploadPage = ({ onUploadSuccess, logoutVersion }: FileUploadPageProps)
     return `${(bytes / 1024).toFixed(2)} KB`
   }
 
+  const getProgressStatus = (progress: number, fileType: UploadType, originalStatus?: string): string | undefined => {
+    if (fileType === UploadType.video) {
+      const progressPercent = progress * 100
+      if (progressPercent >= 30 && progressPercent < 70) {
+        return "음성 처리 중"
+      } else if (progressPercent >= 70 && progressPercent < 80) {
+        return "영상 처리 중"
+      } else if (progressPercent >= 80 && progressPercent < 100) {
+        return "병합 중"
+      }
+    }
+    return originalStatus
+  }
+
   const loadUploadingFiles = async () => {
     try {
       const uploads = await getUploadingFiles()
 
-      const serverFiles: FileItem[] = uploads.map((u) => ({
-        id: u.taskId,
-        name: u.fileName,
-        size: formatFileSize(u.size), 
-        progress:
-          typeof u.progress === "number" ? u.progress / 100 : u.status === "success" ? 1 : 0,
-        status:
-          u.status === "success"
-            ? UploadStatus.done
-            : u.status === "failed"
-            ? UploadStatus.error
-            : UploadStatus.uploading,
-        fileType: u.fileType === UploadType.video ? UploadType.video : UploadType.image,
-        taskId: u.taskId
-      }))
+      const serverFiles: FileItem[] = uploads.map((u) => {
+        const fileType = u.fileType === UploadType.video ? UploadType.video : UploadType.image
+        const progress = typeof u.progress === "number" ? u.progress / 100 : u.status === "success" ? 1 : 0
+        
+        return {
+          id: u.taskId,
+          name: u.fileName,
+          size: formatFileSize(u.size), 
+          progress,
+          progressStatus: getProgressStatus(progress, fileType, u.progressStatus),
+          status:
+            u.status === "success"
+              ? UploadStatus.done
+              : u.status === "failed"
+              ? UploadStatus.error
+              : UploadStatus.uploading,
+          fileType,
+          taskId: u.taskId
+        }
+      })
 
       setFiles((prev) => {
         const byTaskId = new Map(serverFiles.map((f) => [f.taskId, f]))
@@ -88,7 +108,8 @@ const FileUploadPage = ({ onUploadSuccess, logoutVersion }: FileUploadPageProps)
           return {
             ...f,
             status: serverFile.status,
-            progress: serverFile.progress
+            progress: serverFile.progress,
+            progressStatus: serverFile.progressStatus
           }
         })
 
@@ -194,6 +215,11 @@ const FileUploadPage = ({ onUploadSuccess, logoutVersion }: FileUploadPageProps)
   const handleCancelUpload = async (localId: string) => {
     const file = files.find((f) => f.id === localId)
     if (!file) return
+
+    if (file.status === UploadStatus.done) {
+      setFiles((prev) => prev.filter((f) => f.id !== localId))
+      return
+    }
 
     if (!file.taskId) {
       setFiles((prev) => prev.filter((f) => f.id !== localId))
@@ -333,6 +359,7 @@ const FileUploadPage = ({ onUploadSuccess, logoutVersion }: FileUploadPageProps)
               fileName={file.name}
               fileSize={file.size}
               progress={file.progress}
+              progressStatus={file.progressStatus}
               status={file.status}
               type={file.fileType}
               onDownload={
