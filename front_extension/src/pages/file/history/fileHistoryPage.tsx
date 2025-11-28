@@ -196,7 +196,6 @@ const FileHistoryPage = ({
     )
   }
 
-  // 히스토리 필터 버튼과 동일한 보라색 계열로 카드 배경 통일
   const colors = ["rgba(39, 0, 93, 1)"]
 
   return (
@@ -366,8 +365,19 @@ const FileHistoryPage = ({
                       width: "100%",
                       maxWidth: "100%"
                     }}>
-                    {file.previewUrl ? (
-                      file.fileType === "video" ? (
+                    {file.fileType === "video" ? (
+                      file.thumbnailUrl ? (
+                        <img
+                          src={file.thumbnailUrl}
+                          alt={file.fileName}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover"
+                          }}
+                          onError={() => handlePreviewError(index)}
+                        />
+                      ) : file.previewUrl ? (
                         <video
                           src={file.previewUrl}
                           style={{
@@ -378,21 +388,22 @@ const FileHistoryPage = ({
                           muted
                           playsInline
                           preload="metadata"
-                          // 자동 재생 대신 첫 프레임만 썸네일처럼 표시
                           onError={() => handlePreviewError(index)}
                         />
                       ) : (
-                        <img
-                          src={file.previewUrl}
-                          alt={file.fileName}
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "cover"
-                          }}
-                          onError={() => handlePreviewError(index)}
-                        />
+                        buildPlaceholder(file.fileType, file.fileName, color)
                       )
+                    ) : file.previewUrl ? (
+                      <img
+                        src={file.previewUrl}
+                        alt={file.fileName}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover"
+                        }}
+                        onError={() => handlePreviewError(index)}
+                      />
                     ) : (
                       buildPlaceholder(file.fileType, file.fileName, color)
                     )}
