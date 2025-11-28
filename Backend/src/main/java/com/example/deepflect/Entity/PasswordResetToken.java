@@ -23,8 +23,8 @@ public class PasswordResetToken {
 
     private boolean used;
 
-    @OneToOne(cascade = CascadeType.REMOVE)
-    @JoinColumn(name = "user_num", nullable = false)
+    @OneToOne
+    @JoinColumn(name = "user_num", nullable = true)
     private Users user;
 
     private LocalDateTime expiryDate;

@@ -16,6 +16,7 @@ import com.example.deepflect.Repository.UsersRepository;
 import com.example.deepflect.Service.AiService;
 import com.example.deepflect.Service.ProgressService;
 import com.example.deepflect.Service.ProgressManager;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,6 +43,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/files")
 public class FileController {
@@ -199,7 +201,8 @@ public class FileController {
     public ResponseEntity<?> getProgress(@PathVariable("taskId") String taskId) {
         try {
             int progress = progressService.getProgress(taskId);
-            return ResponseEntity.ok(Map.of("taskId", taskId, "progress", progress));
+            String progressStatus = progressService.getProgressStatus(taskId);
+            return ResponseEntity.ok(Map.of("taskId", taskId, "progress", progress, "progressStatus", progressStatus));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error: " + e.getMessage());
         }
@@ -269,6 +272,10 @@ public class FileController {
             if (upload.getTaskId() != null) {
                 int progress = progressService.getProgress(upload.getTaskId());
                 upload.setProgress(progress); // 진행률 설정
+
+                String progressStatus = progressService.getProgressStatus(upload.getTaskId());
+                log.info(progressStatus);
+                upload.setProgressStatus(progressStatus); // 진행상태 설정
 
                 if (progressService.isFailed(upload.getTaskId())) {
                     upload.setStatus(Status.FAILED);
@@ -354,6 +361,7 @@ public class FileController {
                         dto.setFileType(fileType);
                         dto.setSize(f.length());
                         dto.setUrl("http://localhost:8080/api/v1/files/download-protected/" + taskId);
+                        dto.setThumbnailUrl(fileService.getThumbnailUrl(taskId, fileType));
                         dto.setTimestamp(Timestamp.from(java.time.Instant.ofEpochMilli(f.lastModified())));
                         filesList.add(dto);
                     }
@@ -479,7 +487,7 @@ public class FileController {
             catch (Exception e) { System.out.println("Failed to cancel: " + e.getMessage()); }
 
             uploadProgressService.deleteUpload(taskId);
-            progressService.updateProgress(taskId, 0);
+            progressService.updateProgress(taskId, 0, "delete");
 
             return ResponseEntity.ok(Map.of("message", "Upload deleted", "status", 200));
         } catch (Exception e) {
@@ -506,5 +514,27 @@ public class FileController {
         }
     }
 
+    // thumbnail
+    @GetMapping("/thumbnail/{taskId}")
+    public ResponseEntity<Resource> getThumbnail(@PathVariable("taskId") String taskId) {
+        try {
+            // Service를 통해 썸네일 파일 찾기
+            File thumbFile = fileService.findThumbnailFile(taskId);
 
+            if (thumbFile == null || !thumbFile.exists()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            Resource resource = new FileSystemResource(thumbFile);
+
+            // 썸네일은 보통 JPG 형식이므로 image/jpeg로 고정하거나 파일명에 따라 설정
+            return ResponseEntity.ok()
+                    .contentType(MediaType.IMAGE_JPEG)
+                    .body(resource);
+
+        } catch (Exception e) {
+            log.error("Error serving thumbnail", e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
 }

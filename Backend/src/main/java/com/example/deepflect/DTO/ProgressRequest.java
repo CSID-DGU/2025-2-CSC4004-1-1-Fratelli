@@ -6,4 +6,5 @@ import lombok.Data;
 public class ProgressRequest {
     private String taskId;
     private int progress;
+    private String progressStatus;
 }

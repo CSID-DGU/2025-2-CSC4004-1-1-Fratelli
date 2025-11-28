@@ -21,13 +21,14 @@ public class ProgressManager {
         emitterMap.computeIfAbsent(taskId, k -> new ArrayList<>()).add(emitter);
     }
 
-    public void updateProgress(String taskId, int progress) {
+    public void updateProgress(String taskId, int progress, String progressStatus) {
         List<SseEmitter> list = emitterMap.get(taskId);
         if (list == null) return;
 
         for (SseEmitter emitter : list) {
             try {
                 emitter.send(SseEmitter.event().name("progress").data(progress));
+                emitter.send(SseEmitter.event().name("progressStatus").data(progressStatus));
             } catch (IOException e) {
                 emitter.complete();
             }
