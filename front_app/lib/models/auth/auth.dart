@@ -15,10 +15,8 @@ class LoginRequest with _$LoginRequest {
 
 @freezed
 class UserInfo with _$UserInfo {
-  const factory UserInfo({
-    required int id,
-    required String email,
-  }) = _UserInfo;
+  const factory UserInfo({required int userNum, required String email}) =
+      _UserInfo;
 
   factory UserInfo.fromJson(Map<String, dynamic> json) =>
       _$UserInfoFromJson(json);
@@ -46,4 +44,4 @@ class AuthState with _$AuthState {
     UserInfo? userInfo,
     String? error,
   }) = _AuthState;
-} 
+}

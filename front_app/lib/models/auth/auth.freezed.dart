@@ -188,7 +188,7 @@ UserInfo _$UserInfoFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$UserInfo {
-  int get id => throw _privateConstructorUsedError;
+  int get userNum => throw _privateConstructorUsedError;
   String get email => throw _privateConstructorUsedError;
 
   /// Serializes this UserInfo to a JSON map.
@@ -206,7 +206,7 @@ abstract class $UserInfoCopyWith<$Res> {
   factory $UserInfoCopyWith(UserInfo value, $Res Function(UserInfo) then) =
       _$UserInfoCopyWithImpl<$Res, UserInfo>;
   @useResult
-  $Res call({int id, String email});
+  $Res call({int userNum, String email});
 }
 
 /// @nodoc
@@ -224,13 +224,13 @@ class _$UserInfoCopyWithImpl<$Res, $Val extends UserInfo>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? id = null,
+    Object? userNum = null,
     Object? email = null,
   }) {
     return _then(_value.copyWith(
-      id: null == id
-          ? _value.id
-          : id // ignore: cast_nullable_to_non_nullable
+      userNum: null == userNum
+          ? _value.userNum
+          : userNum // ignore: cast_nullable_to_non_nullable
               as int,
       email: null == email
           ? _value.email
@@ -248,7 +248,7 @@ abstract class _$$UserInfoImplCopyWith<$Res>
       __$$UserInfoImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({int id, String email});
+  $Res call({int userNum, String email});
 }
 
 /// @nodoc
@@ -264,13 +264,13 @@ class __$$UserInfoImplCopyWithImpl<$Res>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? id = null,
+    Object? userNum = null,
     Object? email = null,
   }) {
     return _then(_$UserInfoImpl(
-      id: null == id
-          ? _value.id
-          : id // ignore: cast_nullable_to_non_nullable
+      userNum: null == userNum
+          ? _value.userNum
+          : userNum // ignore: cast_nullable_to_non_nullable
               as int,
       email: null == email
           ? _value.email
@@ -283,19 +283,19 @@ class __$$UserInfoImplCopyWithImpl<$Res>
 /// @nodoc
 @JsonSerializable()
 class _$UserInfoImpl implements _UserInfo {
-  const _$UserInfoImpl({required this.id, required this.email});
+  const _$UserInfoImpl({required this.userNum, required this.email});
 
   factory _$UserInfoImpl.fromJson(Map<String, dynamic> json) =>
       _$$UserInfoImplFromJson(json);
 
   @override
-  final int id;
+  final int userNum;
   @override
   final String email;
 
   @override
   String toString() {
-    return 'UserInfo(id: $id, email: $email)';
+    return 'UserInfo(userNum: $userNum, email: $email)';
   }
 
   @override
@@ -303,13 +303,13 @@ class _$UserInfoImpl implements _UserInfo {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _$UserInfoImpl &&
-            (identical(other.id, id) || other.id == id) &&
+            (identical(other.userNum, userNum) || other.userNum == userNum) &&
             (identical(other.email, email) || other.email == email));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, id, email);
+  int get hashCode => Object.hash(runtimeType, userNum, email);
 
   /// Create a copy of UserInfo
   /// with the given fields replaced by the non-null parameter values.
@@ -329,13 +329,14 @@ class _$UserInfoImpl implements _UserInfo {
 
 abstract class _UserInfo implements UserInfo {
   const factory _UserInfo(
-      {required final int id, required final String email}) = _$UserInfoImpl;
+      {required final int userNum,
+      required final String email}) = _$UserInfoImpl;
 
   factory _UserInfo.fromJson(Map<String, dynamic> json) =
       _$UserInfoImpl.fromJson;
 
   @override
-  int get id;
+  int get userNum;
   @override
   String get email;
 

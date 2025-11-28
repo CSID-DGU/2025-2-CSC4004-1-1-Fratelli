@@ -20,13 +20,13 @@ Map<String, dynamic> _$$LoginRequestImplToJson(_$LoginRequestImpl instance) =>
 
 _$UserInfoImpl _$$UserInfoImplFromJson(Map<String, dynamic> json) =>
     _$UserInfoImpl(
-      id: (json['id'] as num).toInt(),
+      userNum: (json['userNum'] as num).toInt(),
       email: json['email'] as String,
     );
 
 Map<String, dynamic> _$$UserInfoImplToJson(_$UserInfoImpl instance) =>
     <String, dynamic>{
-      'id': instance.id,
+      'userNum': instance.userNum,
       'email': instance.email,
     };
 
