@@ -38,7 +38,6 @@ class _FileUploadPageState extends State<FileUploadPage> {
   void initState() {
     super.initState();
     _loadUploadingFiles();
-    // 주기적으로 서버 상태를 가져와 업로드 진행률/완료 상태를 갱신
     _uploadPollTimer = Timer.periodic(
       const Duration(seconds: 3),
       (_) => _loadUploadingFiles(),
@@ -376,10 +375,10 @@ class _FileUploadPageState extends State<FileUploadPage> {
               ),
               const SizedBox(height: 8),
               Text(
-                "딥페이크 생성 방지를 위해 노이즈를 추가할 파일을 업로드해주세요",
+                "노이즈를 추가할 파일을 업로드해주세요",
                 style: GoogleFonts.k2d(
                   fontSize: 14,
-                  color: const Color(0xFFB3A4CC),
+                  color: Color(0xFF9400FF),
                 ),
               ),
               const SizedBox(height: 24),
