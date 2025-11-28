@@ -57,12 +57,10 @@ class _FileUploadPageState extends State<FileUploadPage> {
       if (!mounted) return;
 
       setState(() {
-        // 서버에서 온 업로드 목록을 FileUploadPage의 files 형태로 매핑
         final List<Map<String, dynamic>> serverFiles = uploads.map((item) {
           final formattedSize = _formatFileSize(item['size']);
           final rawStatus = item['status']?.toString() ?? 'uploading';
 
-          // 서버 progress(0~100)를 0.0~1.0 으로 변환
           double progress = 0.0;
           if (item['progress'] is num) {
             progress = (item['progress'] as num).clamp(0, 100) / 100.0;
@@ -70,7 +68,8 @@ class _FileUploadPageState extends State<FileUploadPage> {
             progress = 1.0;
           }
 
-          // FileUploadPage에서 사용하는 상태 문자열로 매핑
+          final progressStatus = item['progressStatus']?.toString();
+
           final String mappedStatus;
           if (rawStatus == 'success') {
             mappedStatus = 'done';
@@ -85,6 +84,7 @@ class _FileUploadPageState extends State<FileUploadPage> {
             "name": item['fileName']?.toString() ?? '',
             "size": formattedSize,
             "progress": progress,
+            "progressStatus": progressStatus,
             "status": mappedStatus,
             "file": null,
             "fileType": item['fileType']?.toString() ?? 'image',
@@ -93,21 +93,18 @@ class _FileUploadPageState extends State<FileUploadPage> {
           };
         }).toList();
 
-        // taskId 기준으로 서버 파일들을 맵으로 구성
         final Map<String, Map<String, dynamic>> serverByTaskId = {
           for (final f in serverFiles)
             if ((f["taskId"] ?? '').toString().isNotEmpty)
               f["taskId"]!.toString(): f,
         };
 
-        // 1) taskId가 있는 기존 files 업데이트 (서버 정보로 덮어쓰기)
         final Map<String, Map<String, dynamic>> updatedByTaskId = {};
         final List<Map<String, dynamic>> localWithoutTaskId = [];
 
         for (final local in files) {
           final localTaskId = local["taskId"]?.toString();
 
-          // taskId가 없는 로컬 파일(업로드 시작 직후 등)은 별도로 보관
           if (localTaskId == null || localTaskId.isEmpty) {
             localWithoutTaskId.add(local);
             continue;
@@ -115,7 +112,6 @@ class _FileUploadPageState extends State<FileUploadPage> {
 
           final serverFile = serverByTaskId[localTaskId];
 
-          // 서버 목록에 더 이상 없고, 로컬 상태가 uploading 이면 -> 완료로 간주
           if (serverFile == null && local["status"] == "uploading") {
             updatedByTaskId[localTaskId] = {
               ...local,
@@ -123,19 +119,17 @@ class _FileUploadPageState extends State<FileUploadPage> {
               "progress": 1.0,
             };
           } else if (serverFile != null) {
-            // 서버 정보가 있으면 서버 상태/진행률로 덮어쓰기
             updatedByTaskId[localTaskId] = {
               ...local,
               "status": serverFile["status"],
               "progress": serverFile["progress"],
+              "progressStatus": serverFile["progressStatus"],
             };
           } else {
-            // 서버에 없고 완료된 파일도 유지
             updatedByTaskId[localTaskId] = local;
           }
         }
 
-        // 2) 서버 파일들 추가 (기존에 없던 것만)
         for (final serverFile in serverFiles) {
           final tid = serverFile["taskId"]?.toString();
           if (tid != null &&
@@ -145,7 +139,6 @@ class _FileUploadPageState extends State<FileUploadPage> {
           }
         }
 
-        // 3) 최종 병합: taskId가 있는 파일들 + taskId가 여전히 없는 로컬 파일들만 유지
         final orphanLocals = localWithoutTaskId.where((file) {
           final tid = file["taskId"]?.toString();
           return tid == null || tid.isEmpty;
@@ -171,7 +164,6 @@ class _FileUploadPageState extends State<FileUploadPage> {
   }
 
   Future<void> _onFileSelected(List<PlatformFile> selectedFiles) async {
-    // 먼저 모든 파일을 리스트에 추가
     final List<Map<String, dynamic>> newFiles = [];
 
     for (var platformFile in selectedFiles) {
@@ -211,26 +203,25 @@ class _FileUploadPageState extends State<FileUploadPage> {
         "name": fileName,
         "size": fileSize,
         "progress": 0.0,
+        "progressStatus": null,
         "status": "uploading",
         "file": file,
         "fileType": fileType,
-        "taskId": null, // 업로드 시작 후 서버에서 받은 taskId
+        "taskId": null,
         "localId": localId,
       });
     }
 
-    // 모든 파일을 한 번에 추가
     if (newFiles.isNotEmpty) {
       setState(() {
         files.addAll(newFiles);
       });
 
-      // 모든 파일을 동시에 업로드 시작
       for (final newFile in newFiles) {
         final file = newFile["file"] as File;
         final fileType = newFile["fileType"] as String;
         final localId = newFile["localId"] as String;
-        _uploadFile(localId, file, fileType); // await 없이 호출하여 동시 업로드
+        _uploadFile(localId, file, fileType);
       }
     }
   }
@@ -384,7 +375,6 @@ class _FileUploadPageState extends State<FileUploadPage> {
               const SizedBox(height: 24),
               FileUploadButton(onFilesSelected: _onFileSelected),
               const SizedBox(height: 24),
-              // 작업 목록 구분선 및 제목
               Row(
                 children: [
                   Expanded(
@@ -438,6 +428,7 @@ class _FileUploadPageState extends State<FileUploadPage> {
                         fileName: file["name"],
                         fileSize: file["size"],
                         progress: file["progress"],
+                        progressStatus: file["progressStatus"]?.toString(),
                         status: _convertStatus(file["status"]),
                         type: _determineUploadType(file["name"]),
                         onDownload: () async {

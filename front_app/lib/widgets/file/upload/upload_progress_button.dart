@@ -6,7 +6,8 @@ enum UploadType { image, video }
 class UploadProgressButton extends StatelessWidget {
   final String fileName;
   final String fileSize;
-  final double progress; // 0 ~ 100
+  final double progress;
+  final String? progressStatus;
   final UploadStatus status;
   final UploadType type;
   final VoidCallback? onDownload;
@@ -17,19 +18,46 @@ class UploadProgressButton extends StatelessWidget {
     required this.fileName,
     required this.fileSize,
     required this.progress,
+    this.progressStatus,
     required this.status,
     required this.type,
     this.onDownload,
     this.onDelete,
   });
 
+  String _getProgressStatusText() {
+    if (progressStatus != null && progressStatus!.isNotEmpty) {
+      final progressPercent = (progress * 100).round();
+      
+      if (type == UploadType.video) {
+        if (progressPercent == 30) {
+          return '음성 처리 중';
+        } else if (progressPercent == 70) {
+          return '영상 처리 중';
+        } else if (progressPercent == 80) {
+          return '병합 중';
+        }
+      }
+      
+      return progressStatus!;
+    }
+    
+    final progressPercent = (progress * 100).round();
+    if (progressPercent == 0) {
+      return '시작';
+    } else if (progressPercent == 100) {
+      return '완료';
+    } else {
+      return '${progressPercent}%';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final horizontalPadding = 20.0; // 양쪽 여백
+    final horizontalPadding = 20.0;
     final containerWidth = screenWidth - (horizontalPadding * 2);
 
-    // 왼쪽 아이콘: 파일 타입
     IconData leftIcon;
     switch (type) {
       case UploadType.image:
@@ -40,11 +68,10 @@ class UploadProgressButton extends StatelessWidget {
         break;
     }
 
-    // 오른쪽 퍼센트: 업로드 중
     Widget? progressText;
     if (status == UploadStatus.uploading) {
       progressText = Text(
-        '${(progress * 100).round()}%',
+        _getProgressStatusText(),
         style: const TextStyle(
           color: Color(0xFF1D0523),
           fontSize: 10,
@@ -54,7 +81,6 @@ class UploadProgressButton extends StatelessWidget {
       );
     }
 
-    // 오른쪽 아이콘: 완료 또는 에러
     Widget? rightIcon;
     if (status == UploadStatus.done) {
       rightIcon = IconButton(
@@ -107,14 +133,12 @@ class UploadProgressButton extends StatelessWidget {
             ),
           ),
 
-          // 파일명 + 파일 크기 (한 줄, 말줄임 처리)
           Positioned(
             left: 52,
-            right: 70, // 오른쪽 아이콘/퍼센트 영역 여유
+            right: 70,
             top: status == UploadStatus.uploading ? 15 : 22,
             child: Row(
               children: [
-                // 파일명은 남는 공간을 차지하고, 너무 길면 말줄임
                 Expanded(
                   child: Text(
                     fileName,
@@ -130,7 +154,6 @@ class UploadProgressButton extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 6),
-                // 파일 크기 (짧은 텍스트)
                 Text(
                   fileSize,
                   maxLines: 1,
@@ -147,7 +170,6 @@ class UploadProgressButton extends StatelessWidget {
             ),
           ),
 
-          // 오른쪽 퍼센트 (업로드 중)
           if (progressText != null)
             Positioned(
               right: 14,
@@ -155,7 +177,6 @@ class UploadProgressButton extends StatelessWidget {
               child: progressText,
             ),
 
-          // 오른쪽 아이콘 (완료 또는 에러)
           if (rightIcon != null)
             Positioned(
               right: 8,
@@ -163,7 +184,6 @@ class UploadProgressButton extends StatelessWidget {
               child: rightIcon,
             ),
 
-          // 업로드 진행 바 (진행 중)
           if (status == UploadStatus.uploading)
             Positioned(
               left: 14,
