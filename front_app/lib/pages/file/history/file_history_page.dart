@@ -297,7 +297,17 @@ class FileHistoryPageState extends ConsumerState<FileHistoryPage> {
                             file['fileName']?.toString() ??
                             file['name']?.toString() ??
                             'unknown';
-                        final previewUrl = file['url']?.toString();
+                        final fileType = file['fileType']
+                                ?.toString()
+                                .toUpperCase() ??
+                            file['type']?.toString().toUpperCase() ??
+                            '';
+                        final thumbnailUrl = file['thumbnailUrl']?.toString();
+                        final previewUrl = fileType == 'VIDEO' &&
+                                thumbnailUrl != null &&
+                                thumbnailUrl.isNotEmpty
+                            ? thumbnailUrl
+                            : file['url']?.toString();
 
                         final colors = [
                           Colors.blue[200]!,
