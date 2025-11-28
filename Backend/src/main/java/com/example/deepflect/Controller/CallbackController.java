@@ -39,11 +39,11 @@ public class CallbackController {
 
     @PostMapping("/ai_progress")
     public ResponseEntity<?> aiProgress(@RequestBody ProgressDTO dto) {
-        System.out.println("[CallbackController] ai_progress received: taskId=" + dto.getTaskId() + " progress=" + dto.getProgress());
+        System.out.println("[CallbackController] ai_progress received: taskId=" + dto.getTaskId() + " progress=" + dto.getProgress() + " progressStatus=" + dto.getProgressStatus());
         // update in-memory progress map for polling
-        progressService.updateProgress(dto.getTaskId(), dto.getProgress());
+        progressService.updateProgress(dto.getTaskId(), dto.getProgress(), dto.getProgressStatus());
         // push to any SSE listeners
-        progressManager.updateProgress(dto.getTaskId(), dto.getProgress());
+        progressManager.updateProgress(dto.getTaskId(), dto.getProgress(), dto.getProgressStatus());
         return ResponseEntity.ok("received");
     }
 
@@ -51,7 +51,7 @@ public class CallbackController {
     public ResponseEntity<?> aiFinished(@RequestBody ProgressDTO dto) {
         System.out.println("[CallbackController] ai_finished received: taskId=" + dto.getTaskId());
         // mark complete for polling and SSE
-        progressService.updateProgress(dto.getTaskId(), 100);
+        progressService.updateProgress(dto.getTaskId(), 100, "완료");
         progressManager.finish(dto.getTaskId());
         // save download URL for later retrieval
         if (dto.getDownloadUrl() != null && !dto.getDownloadUrl().isEmpty()) {

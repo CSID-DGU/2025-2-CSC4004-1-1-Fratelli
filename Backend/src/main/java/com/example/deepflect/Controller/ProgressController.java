@@ -31,7 +31,7 @@ public class ProgressController {
 
     @PostMapping
     public ResponseEntity<String> update(@RequestBody ProgressRequest req) {
-        progressService.updateProgress(req.getTaskId(), req.getProgress());
+        progressService.updateProgress(req.getTaskId(), req.getProgress(), req.getProgressStatus());
         return ResponseEntity.ok("Progress updated");
     }
 
@@ -62,8 +62,8 @@ public class ProgressController {
 
         String progress = restTemplate.getForObject(url, String.class);
 
-        int progressPercent = progressService.getProgress(taskId);
-        System.out.println("현재 진행률 = " + progressPercent + "%");
+        int progressStatus = progressService.getProgress(taskId);
+        System.out.println("현재 진행 상태 " + progressStatus);
 
         return ResponseEntity.ok(progress);
     }

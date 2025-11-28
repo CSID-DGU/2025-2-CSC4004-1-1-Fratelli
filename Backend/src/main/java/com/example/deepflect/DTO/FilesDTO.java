@@ -23,6 +23,7 @@ public class FilesDTO {
     private FileType fileType;
     private long size;
     private String url;
+    private String thumbnailUrl;
     private Timestamp timestamp;
 //    private int progress;
 }

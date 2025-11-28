@@ -42,7 +42,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         // 콜백 엔드포인트 및 공개 다운로드 엔드포인트는 JWT 검증 스킵
         if (requestUri.startsWith("/api/v1/auth/register/") || requestUri.startsWith("/api/v1/auth/login/") ||
                 requestUri.startsWith("/api/v1/auth/refresh/") || requestUri.startsWith("/api/v1/callback/") ||
-                requestUri.startsWith("/api/v1/files/download-protected/") ||
+                requestUri.startsWith("/api/v1/files/download-protected/") || requestUri.startsWith("/api/v1/files/thumbnail/") ||
                 (requestUri.startsWith("/api/v1/auth/password-reset")&& queryString != null && queryString.startsWith("token="))) {
             filterChain.doFilter(request, response);
             return;

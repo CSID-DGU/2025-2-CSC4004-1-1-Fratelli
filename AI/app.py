@@ -16,6 +16,7 @@ import logging
 import sys
 
 # 로컬 모듈
+from deepfake.defend_stargan import generate_video_thumbnail
 from deepvoice.extract_audio import extract_audio
 from deepvoice.protect_audio import protect_audio
 from deepvoice.merge_video import merge_video
@@ -182,7 +183,7 @@ def _background_image_processing(task_id: str, image_path: str):
         try:
             requests.post(
                 'http://localhost:8080/api/v1/callback/ai_progress',
-                json={'taskId': task_id, 'progress': 0},
+                json={'taskId': task_id, 'progress': 0, 'progressStatus': '시작'},
                 timeout=2
             )
         except Exception:
@@ -220,7 +221,7 @@ def _background_image_processing(task_id: str, image_path: str):
         try:
             requests.post(
                 'http://localhost:8080/api/v1/callback/ai_progress',
-                json={'taskId': task_id, 'progress': 100},
+                json={'taskId': task_id, 'progress': 100, 'progressStatus': '완료'},
                 timeout=2
             )
         except Exception:
@@ -233,7 +234,8 @@ def _background_image_processing(task_id: str, image_path: str):
                 json={
                     'taskId': task_id,
                     'progress': 100,
-                    'downloadUrl': f'http://localhost:8080/api/v1/files/download-protected/{task_id}'
+                    'downloadUrl': f'http://localhost:8080/api/v1/files/download-protected/{task_id}',
+                    'progressStatus': '완료'
                 },
                 timeout=2
             )
@@ -294,7 +296,7 @@ def _background_video_processing(task_id: str, video_path: str):
         try:
             requests.post(
                 'http://localhost:8080/api/v1/callback/ai_progress',
-                json={'taskId': task_id, 'progress': 0},
+                json={'taskId': task_id, 'progress': 0, 'progressStatus': '시작'},
                 timeout=2
             )
         except Exception:
@@ -316,11 +318,11 @@ def _background_video_processing(task_id: str, video_path: str):
         extract_audio(video_path, extracted_audio)
         print(f"[{task_id}] Audio extracted: {extracted_audio}")
 
-        # 진행률 30%
+        # 진행률 30% (노이즈 삽입 중)
         try:
             requests.post(
                 'http://localhost:8080/api/v1/callback/ai_progress',
-                json={'taskId': task_id, 'progress': 30},
+                json={'taskId': task_id, 'progress': 30, 'progressStatus': '오디오 노이즈 삽입 중'},
                 timeout=2
             )
         except Exception:
@@ -347,7 +349,7 @@ def _background_video_processing(task_id: str, video_path: str):
         try:
             requests.post(
                 'http://localhost:8080/api/v1/callback/ai_progress',
-                json={'taskId': task_id, 'progress': 70},
+                json={'taskId': task_id, 'progress': 70, 'progressStatus': '오디오 완료'},
                 timeout=2
             )
         except Exception:
@@ -384,7 +386,7 @@ def _background_video_processing(task_id: str, video_path: str):
         try:
             requests.post(
                 'http://localhost:8080/api/v1/callback/ai_progress',
-                json={'taskId': task_id, 'progress': 80},
+                json={'taskId': task_id, 'progress': 80, 'progressStatus': '영상 노이즈 삽입 완료'},
                 timeout=2
             )
         except Exception:
@@ -404,12 +406,18 @@ def _background_video_processing(task_id: str, video_path: str):
         
         merge_video(defended_video, protected_audio, output_video)
         print(f"[{task_id}] Final video merged: {output_video}")
+        
+        # ---  썸네일 생성 로직 추가 ---
+        print(f"[{task_id}] Generating thumbnail...")
+        # output_video가 ".../uuid_protected.mp4" 이므로 
+        # 썸네일은 ".../uuid_protected_thumbnail.jpg"로 생성됨
+        generate_video_thumbnail(output_video, OUTPUT_FOLDER)
 
         # 진행률 100%
         try:
             requests.post(
                 'http://localhost:8080/api/v1/callback/ai_progress',
-                json={'taskId': task_id, 'progress': 100},
+                json={'taskId': task_id, 'progress': 100, 'progressStatus': '완료'},
                 timeout=2
             )
         except Exception:
@@ -422,7 +430,8 @@ def _background_video_processing(task_id: str, video_path: str):
                 json={
                     'taskId': task_id,
                     'progress': 100,
-                    'downloadUrl': f'http://localhost:8080/api/v1/files/download-protected/{task_id}'
+                    'downloadUrl': f'http://localhost:8080/api/v1/files/download-protected/{task_id}',
+                    'progressStatus': '완료'
                 },
                 timeout=2
             )
@@ -540,7 +549,29 @@ async def process_file(
         logger.error(f"Error in process_file: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
+@app.get('/api/v1/files/thumbnail/{task_id}')
+async def get_thumbnail(task_id: str):
+    """썸네일 이미지 다운로드"""
+    # 생성 규칙: {task_id}_protected_thumbnail.jpg
+    # (generate_video_thumbnail 함수가 파일명_thumbnail.jpg 로 저장하기 때문)
+    thumbnail_filename = f"{task_id}_protected_thumbnail.jpg"
+    thumbnail_path = os.path.join(OUTPUT_FOLDER, thumbnail_filename)
+    
+    if not os.path.exists(thumbnail_path):
+        # 혹시 protected가 안 붙은 경우를 대비한 예외 처리 (선택사항)
+        fallback_path = os.path.join(OUTPUT_FOLDER, f"{task_id}_thumbnail.jpg")
+        if os.path.exists(fallback_path):
+            thumbnail_path = fallback_path
+            thumbnail_filename = f"{task_id}_thumbnail.jpg"
+        else:
+            raise HTTPException(status_code=404, detail="Thumbnail not found")
+            
+    return FileResponse(
+        thumbnail_path, 
+        media_type="image/jpeg", 
+        filename=thumbnail_filename
+    )
+    
 @app.get('/api/v1/download/{task_id}')
 async def download_file(task_id: str):
     """보호된 파일 다운로드 (비디오/이미지/오디오)"""
