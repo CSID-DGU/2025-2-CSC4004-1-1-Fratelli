@@ -21,6 +21,7 @@ interface UploadProgressButtonProps {
   fileName: string
   fileSize: string
   progress: number // 0 ~ 1 (0 ~ 100%)
+  progressStatus?: string
   status: UploadStatus
   type: UploadType
   onDownload?: () => void
@@ -31,6 +32,7 @@ const UploadProgressButton = ({
   fileName,
   fileSize,
   progress,
+  progressStatus,
   status,
   type,
   onDownload,
@@ -91,7 +93,7 @@ const UploadProgressButton = ({
           fontFamily: "'K2D', sans-serif",
           fontWeight: 500,
           lineHeight: 1.69,
-          maxWidth: "calc(100% - 160px)",
+          maxWidth: "calc(100% - 200px)",
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap"
@@ -102,7 +104,7 @@ const UploadProgressButton = ({
       <div
         style={{
           position: "absolute",
-          right: 70,
+          right: 90,
           top: fileSizeTop,
           color: "rgba(162, 162, 162, 1)",
           fontSize: 10,
@@ -122,9 +124,13 @@ const UploadProgressButton = ({
             color: "rgba(29, 5, 35, 1)",
             fontSize: 10,
             fontFamily: "'K2D', sans-serif",
-            fontWeight: 500
+            fontWeight: 500,
+            maxWidth: "calc(100% - 200px)",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap"
           }}>
-          {Math.round(progress * 100)}%
+          {progressStatus || `${Math.round(progress * 100)}%`}
         </div>
       )}
 
