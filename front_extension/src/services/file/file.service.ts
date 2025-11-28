@@ -13,6 +13,7 @@ export interface UploadFileResponse {
   userEmail: string
   status: string
   progress?: number
+  progressStatus?: string
   message?: string
   timestamp?: string
 }
@@ -26,6 +27,7 @@ export interface FileListItem {
   message?: string
   timestamp: string
   previewUrl?: string
+  thumbnailUrl?: string
 }
 
 interface RawFileListItem {
@@ -36,6 +38,7 @@ interface RawFileListItem {
   url: string
   message?: string
   timestamp: string
+  thumbnailUrl?: string
 }
 
 interface FileListResponse {
@@ -48,6 +51,7 @@ export interface UploadingFileItem {
   fileType: FileType
   status: "uploading" | "failed" | "success"
   progress?: number
+  progressStatus?: string
   size: number
   message?: string
   timestamp: string
@@ -234,7 +238,8 @@ export const getFiles = async (type?: FileType): Promise<FileListItem[]> => {
         size: file.size,
         url: file.url,
         timestamp: file.timestamp,
-        previewUrl: file.url
+        previewUrl: file.url,
+        thumbnailUrl: file.thumbnailUrl
       }
     })
 
