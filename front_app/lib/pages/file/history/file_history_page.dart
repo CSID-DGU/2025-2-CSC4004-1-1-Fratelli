@@ -26,7 +26,6 @@ class FileHistoryPageState extends ConsumerState<FileHistoryPage> {
   @override
   void initState() {
     super.initState();
-    // 로그인 상태 확인 후 파일 로드
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAuthAndLoadFiles();
     });
@@ -37,11 +36,9 @@ class FileHistoryPageState extends ConsumerState<FileHistoryPage> {
   }
 
   Future<void> _checkAuthAndLoadFiles() async {
-    // 로그인 상태와 토큰 모두 확인
     final authState = ref.read(authNotifierProvider);
     final hasToken = await TokenStorage.hasTokens();
 
-    // 로그인 상태가 아니고 토큰도 없으면 에러 표시
     if (!authState.isAuthenticated && !hasToken) {
       if (mounted) {
         setState(() {
@@ -52,7 +49,6 @@ class FileHistoryPageState extends ConsumerState<FileHistoryPage> {
       return;
     }
 
-    // 로그인 상태이거나 토큰이 있으면 파일 로드
     _loadFiles();
   }
 
@@ -86,9 +82,7 @@ class FileHistoryPageState extends ConsumerState<FileHistoryPage> {
           _isLoading = false;
         });
 
-        // 토큰 관련 에러인 경우 로그인 상태 확인
         if (errorMsg.contains('액세스 토큰') || errorMsg.contains('로그인')) {
-          // 로그인 상태 다시 확인
           final authState = ref.read(authNotifierProvider);
           if (!authState.isAuthenticated) {
             setState(() {
@@ -180,7 +174,6 @@ class FileHistoryPageState extends ConsumerState<FileHistoryPage> {
       body: SafeArea(
         child: Column(
           children: [
-            // 헤더 영역
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
               child: Column(
@@ -195,7 +188,6 @@ class FileHistoryPageState extends ConsumerState<FileHistoryPage> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  // 상단 필터 버튼
                   Row(
                     children: List.generate(tabs.length, (i) {
                       return Expanded(
@@ -220,7 +212,6 @@ class FileHistoryPageState extends ConsumerState<FileHistoryPage> {
                 ],
               ),
             ),
-            // 파일 목록
             Expanded(
               child: _isLoading
                   ? const Center(
@@ -321,7 +312,6 @@ class FileHistoryPageState extends ConsumerState<FileHistoryPage> {
                         final color = colors[index % colors.length];
 
                         return GestureDetector(
-                          // 사진/동영상 모두 탭 시 바로 다운로드
                           onTap: () async {
                             _downloadFile(taskId, fileName);
                           },
@@ -381,19 +371,39 @@ class FileHistoryPageState extends ConsumerState<FileHistoryPage> {
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(12),
-                              child: previewUrl != null && previewUrl.isNotEmpty
-                                  ? Image.network(
-                                      previewUrl,
-                                      fit: BoxFit.cover,
-                                      errorBuilder:
-                                          (context, error, stackTrace) {
-                                            return _buildPlaceholder(
-                                              fileName,
-                                              color,
-                                            );
-                                          },
-                                    )
-                                  : _buildPlaceholder(fileName, color),
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  previewUrl != null && previewUrl.isNotEmpty
+                                      ? Image.network(
+                                          previewUrl,
+                                          fit: BoxFit.cover,
+                                          errorBuilder:
+                                              (context, error, stackTrace) {
+                                                return _buildPlaceholder(
+                                                  fileName,
+                                                  color,
+                                                );
+                                              },
+                                        )
+                                      : _buildPlaceholder(fileName, color),
+                                  if (fileType == 'VIDEO')
+                                    Center(
+                                      child: Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withOpacity(0.5),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(
+                                          Icons.play_arrow,
+                                          color: Colors.white,
+                                          size: 24,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
                             ),
                           ),
                         );
