@@ -13,12 +13,6 @@ class EditProfilePage extends ConsumerStatefulWidget {
 }
 
 class _EditProfilePageState extends ConsumerState<EditProfilePage> {
-  bool _isEmailMode = true; // true: 이메일 수정, false: 비밀번호 수정
-  
-  // 이메일 수정용 컨트롤러
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordForEmailController = TextEditingController();
-  
   // 비밀번호 수정용 컨트롤러
   final TextEditingController _currentPasswordController = TextEditingController();
   final TextEditingController _newPasswordController = TextEditingController();
@@ -28,37 +22,11 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   String? _errorMessage;
 
   @override
-  void initState() {
-    super.initState();
-    // 현재 사용자 이메일로 초기화
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final userInfo = ref.read(userInfoProvider);
-      userInfo.whenData((data) {
-        if (data != null) {
-          _emailController.text = data.email;
-        }
-      });
-    });
-  }
-
-  @override
   void dispose() {
-    _emailController.dispose();
-    _passwordForEmailController.dispose();
     _currentPasswordController.dispose();
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
-  }
-
-  String? _validateEmail(String? value) {
-    if (value == null || value.isEmpty) {
-      return '이메일을 입력해주세요.';
-    }
-    if (!value.contains('@') || !value.contains('.')) {
-      return '올바른 이메일 형식을 입력해주세요.';
-    }
-    return null;
   }
 
   String? _validatePassword(String? value) {
@@ -128,42 +96,14 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                       color: Colors.black,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 0.0),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: RadioListTile<bool>(
-                            contentPadding: EdgeInsets.zero,
-                            dense: true,
-                            title: Text('Email', style: TextStyle(fontSize: 14, fontFamily: 'K2D')),
-                            value: true,
-                            groupValue: _isEmailMode,
-                            onChanged: (value) {
-                              setState(() {
-                                _isEmailMode = value!;
-                              });
-                            },
-                            activeColor: Color.fromRGBO(39, 0, 93, 1),
-                          ),
-                        ),
-                        Expanded(
-                          child: RadioListTile<bool>(
-                            contentPadding: EdgeInsets.zero,
-                            dense: true,
-                            title: Text('비밀번호', style: TextStyle(fontSize: 14, fontFamily: 'K2D')),
-                            value: false,
-                            groupValue: _isEmailMode,
-                            onChanged: (value) {
-                              setState(() {
-                                _isEmailMode = value!;
-                              });
-                            },
-                            activeColor: Color.fromRGBO(39, 0, 93, 1),
-                          ),
-                        ),
-                      ],
+                  const SizedBox(height: 6),
+                  Text(
+                    "비밀번호 변경",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontFamily: 'K2D',
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF9400FF),
                     ),
                   ),
                 ],
@@ -179,150 +119,67 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-
-                      // 이메일 수정 폼
-                      if (_isEmailMode) ...[
-                        FullFormInput(
-                          text: "Email", 
-                          text2: "이메일을 입력하세요.",
-                          controller: _emailController,
-                          validator: _validateEmail,
-                          prefixIcon: Icon(Icons.mail, color: Color.fromRGBO(39, 0, 93, 1)),
-                        ),
-                        SizedBox(height: screenHeight < 700 ? 20 : 35),
-                        FullFormInput(
-                          text: "비밀번호",
-                          text2: "비밀번호를 입력하세요",
-                          isPassword: true,
-                          controller: _passwordForEmailController,
-                          validator: _validatePassword,
-                          prefixIcon: Icon(Icons.lock, color: Color.fromRGBO(39, 0, 93, 1)),
-                        ),
-                        SizedBox(height: screenHeight < 700 ? 12 : 16),
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[50],
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '*반드시 본인의 이메일을 입력해주세요.',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '*계정 분실시 비밀번호 찾기 등에 사용됩니다.',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (_errorMessage != null) ...[
-                          SizedBox(height: screenHeight < 700 ? 12 : 16),
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.red[50],
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.red[300]!),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.error_outline, color: Colors.red[700], size: 20),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    _errorMessage!,
-                                    style: TextStyle(
-                                      color: Colors.red[700],
-                                      fontSize: 14,
-                                      fontFamily: 'K2D',
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                        SizedBox(height: screenHeight < 700 ? 30 : 50),
-                        LoginButton(
-                          text: isLoading ? "처리 중..." : "수정",
-                          onTap: isLoading ? null : _handleEmailChange,
-                        ),
-                      ],
-
-                      // 비밀번호 수정 폼
-                      if (!_isEmailMode) ...[
-                        FullFormInput(
-                          text: "현재 비밀번호", 
-                          text2: "현재 비밀번호를 입력하세요.",
-                          isPassword: true,
-                          controller: _currentPasswordController,
-                          validator: _validatePassword,
-                          prefixIcon: Icon(Icons.lock, color: Color.fromRGBO(39, 0, 93, 1)),
-                        ),
-                        SizedBox(height: screenHeight < 700 ? 20 : 35),
-                        FullFormInput(
-                          text: "새 비밀번호", 
-                          text2: "새 비밀번호를 입력하세요.",
-                          isPassword: true,
-                          controller: _newPasswordController,
-                          validator: _validatePassword,
-                          prefixIcon: Icon(Icons.lock, color: Color.fromRGBO(39, 0, 93, 1)),
-                        ),
-                        SizedBox(height: screenHeight < 700 ? 20 : 35),
-                        FullFormInput(
-                          text: "새 비밀번호 확인",
-                          text2: "새 비밀번호를 입력하세요.",
-                          isPassword: true,
-                          controller: _confirmPasswordController,
-                          validator: _validateConfirmPassword,
-                          prefixIcon: Icon(Icons.lock, color: Color.fromRGBO(39, 0, 93, 1)),
-                        ),
-                        if (_errorMessage != null) ...[
-                          SizedBox(height: screenHeight < 700 ? 12 : 16),
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.red[50],
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.red[300]!),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.error_outline, color: Colors.red[700], size: 20),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    _errorMessage!,
-                                    style: TextStyle(
-                                      color: Colors.red[700],
-                                      fontSize: 14,
-                                      fontFamily: 'K2D',
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                        SizedBox(height: screenHeight < 700 ? 30 : 50),
-                        LoginButton(
-                          text: isLoading ? "처리 중..." : "수정",
-                          onTap: isLoading ? null : _handlePasswordChange,
-                        ),
-                      ],
-                    ],
+                  // 비밀번호 수정 폼
+                  FullFormInput(
+                    text: "현재 비밀번호", 
+                    text2: "현재 비밀번호를 입력하세요.",
+                    isPassword: true,
+                    controller: _currentPasswordController,
+                    validator: _validatePassword,
+                    prefixIcon: Icon(Icons.lock, color: Color.fromRGBO(39, 0, 93, 1)),
                   ),
+                  SizedBox(height: screenHeight < 700 ? 20 : 35),
+                  FullFormInput(
+                    text: "새 비밀번호", 
+                    text2: "새 비밀번호를 입력하세요.",
+                    isPassword: true,
+                    controller: _newPasswordController,
+                    validator: _validatePassword,
+                    prefixIcon: Icon(Icons.lock, color: Color.fromRGBO(39, 0, 93, 1)),
+                  ),
+                  SizedBox(height: screenHeight < 700 ? 20 : 35),
+                  FullFormInput(
+                    text: "새 비밀번호 확인",
+                    text2: "새 비밀번호를 입력하세요.",
+                    isPassword: true,
+                    controller: _confirmPasswordController,
+                    validator: _validateConfirmPassword,
+                    prefixIcon: Icon(Icons.lock, color: Color.fromRGBO(39, 0, 93, 1)),
+                  ),
+                  if (_errorMessage != null) ...[
+                    SizedBox(height: screenHeight < 700 ? 12 : 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.red[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.red[300]!),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.error_outline, color: Colors.red[700], size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _errorMessage!,
+                              style: TextStyle(
+                                color: Colors.red[700],
+                                fontSize: 14,
+                                fontFamily: 'K2D',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  SizedBox(height: screenHeight < 700 ? 30 : 50),
+                  LoginButton(
+                    text: isLoading ? "처리 중..." : "수정",
+                    onTap: isLoading ? null : _handlePasswordChange,
+                  ),
+                ],
+              ),
             ),
             SizedBox(height: MediaQuery.of(context).viewInsets.bottom > 0 ? 20 : 0),
           ],
@@ -331,59 +188,6 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         ),
       ),
     );
-  }
-
-  Future<void> _handleEmailChange() async {
-    // 폼 유효성 검사
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    if (_emailController.text.isEmpty || _passwordForEmailController.text.isEmpty) {
-      setState(() {
-        _errorMessage = '모든 필드를 입력해주세요.';
-      });
-      return;
-    }
-
-    // 이메일 형식 검증
-    if (!_emailController.text.contains('@') || !_emailController.text.contains('.')) {
-      setState(() {
-        _errorMessage = '올바른 이메일 형식을 입력해주세요.';
-      });
-      return;
-    }
-
-    setState(() {
-      _errorMessage = null;
-    });
-
-    try {
-      // 명세: UserUpdateRequest { "email", "password" }
-      final updatedUser = await ref.read(authNotifierProvider.notifier).updateUser({
-        'email': _emailController.text.trim(),
-        'password': _passwordForEmailController.text,
-      });
-
-      // UserProvider도 업데이트
-      ref.read(userNotifierProvider.notifier).updateUserInfo(updatedUser);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('이메일 변경이 완료되었습니다.'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(context);
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = e.toString().replaceAll('Exception: ', '');
-        });
-      }
-    }
   }
 
   Future<void> _handlePasswordChange() async {

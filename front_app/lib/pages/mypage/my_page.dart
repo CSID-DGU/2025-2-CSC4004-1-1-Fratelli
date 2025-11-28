@@ -5,7 +5,7 @@ import 'package:deepflect_app/widgets/mypage/upload_statistics.dart';
 import 'package:deepflect_app/pages/mypage/edit_account.dart';
 import 'package:deepflect_app/models/auth/auth_provider.dart';
 import 'package:deepflect_app/models/auth/user_provider.dart';
-import 'package:deepflect_app/pages/login/login.dart';
+import 'package:deepflect_app/pages/login/landing.dart';
 import 'package:deepflect_app/pages/mypage/delete_account.dart';
 import 'package:deepflect_app/pages/mypage/notification.dart';
 import 'package:deepflect_app/pages/mypage/notification_setting.dart';
@@ -34,8 +34,8 @@ class _MyPageState extends ConsumerState<MyPage> {
 
   Future<void> _loadStatistics() async {
     try {
-      final photos = await _fileService.getFiles(type: 'image');
-      final videos = await _fileService.getFiles(type: 'video');
+      final photos = await _fileService.getFiles(type: 'IMAGE');
+      final videos = await _fileService.getFiles(type: 'VIDEO');
 
       if (!mounted) return;
       setState(() {
@@ -53,17 +53,20 @@ class _MyPageState extends ConsumerState<MyPage> {
     }
   }
 
-  void _showLogoutDialog(BuildContext context, WidgetRef ref) {
+  void _showLogoutDialog(BuildContext pageContext, WidgetRef ref) {
     showDialog(
-      context: context,
+      context: pageContext,
       barrierColor: Colors.black.withOpacity(0.5),
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return AlertDialog(
           backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 20,
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -89,7 +92,7 @@ class _MyPageState extends ConsumerState<MyPage> {
                 children: [
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () => Navigator.of(dialogContext).pop(),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
                         foregroundColor: Color.fromRGBO(39, 0, 93, 1),
@@ -114,15 +117,21 @@ class _MyPageState extends ConsumerState<MyPage> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        ref.read(authNotifierProvider.notifier).logout();
-                        Navigator.of(context).pushAndRemoveUntil(
-                          MaterialPageRoute(
-                            builder: (context) => const LoginMain(),
-                          ),
-                          (route) => false,
-                        );
+                      onPressed: () async {
+                        Navigator.of(dialogContext).pop();
+                        // 사용자 정보 초기화
+                        ref.read(userNotifierProvider.notifier).clearUserInfo();
+                        // 로그아웃 (완료될 때까지 대기)
+                        await ref.read(authNotifierProvider.notifier).logout();
+                        // 로그아웃 완료 후 랜딩 페이지로 이동
+                        if (pageContext.mounted) {
+                          Navigator.of(pageContext).pushAndRemoveUntil(
+                            MaterialPageRoute(
+                              builder: (context) => const LandingPage(),
+                            ),
+                            (route) => false,
+                          );
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Color.fromRGBO(39, 0, 93, 1),
@@ -182,92 +191,96 @@ class _MyPageState extends ConsumerState<MyPage> {
                   ),
                   const SizedBox(height: 28),
                   // 사용자 정보 (프로필 아이콘 + 이메일)
-                  ref.watch(userInfoProvider).when(
-                    data: (userInfo) => Row(
-                      children: [
-                        // 프로필 아이콘
-                        Container(
-                          width: 35,
-                          height: 35,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(100),
-                          ),
-                          child: const Icon(
-                            Icons.account_box,
-                            color: Color(0xFF27005D),
-                            size: 24,
-                          ),
+                  ref
+                      .watch(userInfoProvider)
+                      .when(
+                        data: (userInfo) => Row(
+                          children: [
+                            // 프로필 아이콘
+                            Container(
+                              width: 35,
+                              height: 35,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(100),
+                              ),
+                              child: const Icon(
+                                Icons.account_box,
+                                color: Color(0xFF27005D),
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            // 이메일
+                            Text(
+                              userInfo?.email ?? '이메일 없음',
+                              style: GoogleFonts.k2d(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 12),
-                        // 이메일
-                        Text(
-                          userInfo?.email ?? '이메일 없음',
-                          style: GoogleFonts.k2d(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.white,
-                          ),
+                        loading: () => Row(
+                          children: [
+                            // 프로필 아이콘
+                            Container(
+                              width: 35,
+                              height: 35,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(100),
+                              ),
+                              child: const Icon(
+                                Icons.account_box,
+                                color: Color(0xFF27005D),
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            // 로딩 중
+                            const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    loading: () => Row(
-                      children: [
-                        // 프로필 아이콘
-                        Container(
-                          width: 35,
-                          height: 35,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(100),
-                          ),
-                          child: const Icon(
-                            Icons.account_box,
-                            color: Color(0xFF27005D),
-                            size: 24,
-                          ),
+                        error: (error, stack) => Row(
+                          children: [
+                            // 프로필 아이콘
+                            Container(
+                              width: 35,
+                              height: 35,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(100),
+                              ),
+                              child: const Icon(
+                                Icons.account_box,
+                                color: Color(0xFF27005D),
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            // 에러 메시지
+                            Text(
+                              '이메일 불러오기 실패',
+                              style: GoogleFonts.k2d(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 12),
-                        // 로딩 중
-                        const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        ),
-                      ],
-                    ),
-                    error: (error, stack) => Row(
-                      children: [
-                        // 프로필 아이콘
-                        Container(
-                          width: 35,
-                          height: 35,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(100),
-                          ),
-                          child: const Icon(
-                            Icons.account_box,
-                            color: Color(0xFF27005D),
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        // 에러 메시지
-                        Text(
-                          '이메일 불러오기 실패',
-                          style: GoogleFonts.k2d(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                      ),
                 ],
               ),
             ),
@@ -324,16 +337,14 @@ class _MyPageState extends ConsumerState<MyPage> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const NotificationSettingPage(),
+                            builder: (context) =>
+                                const NotificationSettingPage(),
                           ),
                         );
                       },
                     ),
                     const SizedBox(height: 24),
-                    const Divider(
-                      color: Color(0xFFE5E0F2),
-                      thickness: 1,
-                    ),
+                    const Divider(color: Color(0xFFE5E0F2), thickness: 1),
                     const SizedBox(height: 24),
                     // 계정
                     Text(
@@ -349,7 +360,7 @@ class _MyPageState extends ConsumerState<MyPage> {
                     MenuItemWithSubtitle(
                       icon: Icons.info_outline,
                       title: '회원정보 수정',
-                      subtitle: '이메일, 비밀번호 변경',
+                      subtitle: '비밀번호 변경',
                       onTap: () {
                         Navigator.push(
                           context,
