@@ -29,6 +29,12 @@ class AuthNotifier extends _$AuthNotifier {
         accessToken: accessToken,
         refreshToken: refreshToken,
       );
+    } else {
+      state = state.copyWith(
+        isAuthenticated: false,
+        accessToken: null,
+        refreshToken: null,
+      );
     }
   }
 
