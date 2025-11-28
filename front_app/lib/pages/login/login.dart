@@ -79,124 +79,133 @@ class _LoginMainState extends ConsumerState<LoginMain> {
       });
     }
 
+    final screenHeight = MediaQuery.of(context).size.height;
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: <Widget>[
-            Padding(
-              padding: const EdgeInsets.only(left: 10.0, top: 15.0),
-              child: IconButton(
-                icon: Icon(
-                  Icons.chevron_left,
-                  color: Color.fromRGBO(39, 0, 93, 1),
+        child: SingleChildScrollView(
+          physics: const ClampingScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: screenHeight - MediaQuery.of(context).padding.top - MediaQuery.of(context).padding.bottom,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: <Widget>[
+                Padding(
+                  padding: const EdgeInsets.only(left: 10.0, top: 15.0),
+                  child: IconButton(
+                    icon: Icon(
+                      Icons.chevron_left,
+                      color: Color.fromRGBO(39, 0, 93, 1),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                  ),
                 ),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ),
-            
-            // 제목
-            Padding(
-              padding: const EdgeInsets.only(
-                left: 30.0,
-                top: 100.0,
-                right: 20.0,
-                bottom: 70.0,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Text(
-                    "로그인",
-                    style: TextStyle(
-                      fontSize: 30,
-                      fontFamily: 'K2D',
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black,
-                    ),
+                
+                // 제목
+                Padding(
+                  padding: EdgeInsets.only(
+                    left: 30.0,
+                    top: screenHeight < 700 ? 30.0 : 70.0,
+                    right: 20.0,
+                    bottom: screenHeight < 700 ? 20.0 : 50.0,
                   ),
-                  SizedBox(height: 8),
-                  Text(
-                    "Lets login to use Deepflect",
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontFamily: 'K2D',
-                      color: Color.fromRGBO(136, 86, 204, 1),
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Text(
+                        "로그인",
+                        style: TextStyle(
+                          fontSize: 30,
+                          fontFamily: 'K2D',
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        "Lets login to use Deepflect",
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontFamily: 'K2D',
+                          color: Color.fromRGBO(136, 86, 204, 1),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-            
-            // 폼 필드
-            Expanded(
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: Padding(
+                ),
+                
+                SizedBox(height: screenHeight < 700 ? 10 : 20),
+                
+                Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: [
-                    FullFormInput(
-                      text: "Email", 
-                      text2: "이메일을 입력하세요.",
-                      controller: _emailController,
-                      prefixIcon: Icon(
-                        Icons.mail,
-                        color: Color.fromRGBO(39, 0, 93, 1),
-                      ),
-                    ),
-                    const SizedBox(height: 45),
-                    FullFormInput(
-                      text: "Password",
-                      text2: "비밀번호를 입력하세요.",
-                      isPassword: true,
-                      controller: _passwordController,
-                      prefixIcon: Icon(
-                        Icons.lock,
-                        color: Color.fromRGBO(39, 0, 93, 1),
-                      ),
-                    ),
-                    const SizedBox(height: 15),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        custom.TextButton(
-                          text: "비밀번호 찾기",
-                          fontSize: 15,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const FindPasswordPage()),
-                            );
-                          },
+                      FullFormInput(
+                        text: "Email", 
+                        text2: "이메일을 입력하세요.",
+                        controller: _emailController,
+                        prefixIcon: Icon(
+                          Icons.mail,
+                          color: Color.fromRGBO(39, 0, 93, 1),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 55),
-                    authState.isLoading
-                        ? const Center(
-                            child: CircularProgressIndicator(),
-                          )
-                        : LoginButton(
-                            text: "로그인",
-                            onTap: _handleLogin,
+                      ),
+                      SizedBox(height: screenHeight < 700 ? 20 : 35),
+                      FullFormInput(
+                        text: "Password",
+                        text2: "비밀번호를 입력하세요.",
+                        isPassword: true,
+                        controller: _passwordController,
+                        prefixIcon: Icon(
+                          Icons.lock,
+                          color: Color.fromRGBO(39, 0, 93, 1),
+                        ),
+                      ),
+                      const SizedBox(height: 15),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          custom.TextButton(
+                            text: "비밀번호 찾기",
+                            fontSize: 15,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const FindPasswordPage()),
+                              );
+                            },
                           ),
-                    const SizedBox(height: 16),
-                    custom.TextButton(
-                      text: "회원가입",
-                      onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (context) => const SignUpPage())),
-                    ),
-                  ],
+                        ],
+                      ),
+                      SizedBox(height: screenHeight < 700 ? 30 : 50),
+                      authState.isLoading
+                          ? const Center(
+                              child: CircularProgressIndicator(),
+                            )
+                          : LoginButton(
+                              text: "로그인",
+                              onTap: _handleLogin,
+                            ),
+                      const SizedBox(height: 16),
+                      custom.TextButton(
+                        text: "회원가입",
+                        onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (context) => const SignUpPage())),
+                      ),
+                      SizedBox(height: keyboardHeight > 0 ? 20 : 0),
+                    ],
+                  ),
                 ),
-              ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
