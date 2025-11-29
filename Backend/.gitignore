@@ -26,6 +26,9 @@ out/
 !**/src/main/**/out/
 !**/src/test/**/out/
 
+### firebase adminsdk ###
+src/main/resources/firebase-adminsdk.json
+
 ### NetBeans ###
 /nbproject/private/
 /nbbuild/

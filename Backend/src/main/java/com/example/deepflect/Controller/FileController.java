@@ -122,7 +122,7 @@ public class FileController {
         uploadMeta.setUserEmail(user.getEmail());
         uploadProgressService.saveUpload(uploadMeta);
 
-        aiService.requestNoiseProcessing(taskId, savedPath);
+        aiService.requestNoiseProcessing(user, taskId, savedPath);
 
         return ResponseEntity.ok(uploadMeta);
 //        return ResponseEntity.ok(taskId);
@@ -442,7 +442,7 @@ public class FileController {
 //            File f = new File(expectedPath);
 
             if (expectedFile.exists()) {
-                aiService.requestNoiseProcessing(uploadResp.getTaskId(), expectedFile.getAbsolutePath());
+                aiService.requestNoiseProcessing(user, uploadResp.getTaskId(), expectedFile.getAbsolutePath());
                 uploadProgressService.saveUpload(uploadResp);
                 return ResponseEntity.ok(Map.of("taskId", uploadResp.getTaskId(), "processed", true));
             } else {

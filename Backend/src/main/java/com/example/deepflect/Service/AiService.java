@@ -1,6 +1,9 @@
 package com.example.deepflect.Service;
 
+import com.example.deepflect.Entity.FileType;
 import com.example.deepflect.Entity.Files;
+import com.example.deepflect.Entity.Status;
+import com.example.deepflect.Entity.Users;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,29 +34,38 @@ public class AiService {
     @Autowired
     RestTemplate restTemplate;
 
+    @Autowired
+    NotificationService notificationService;
+
     /**
      * Python 음성 보호 API 호출
      * @param taskId 작업 ID
      * @param filePath 저장된 원본 파일 경로
      */
-    public void requestNoiseProcessing(String taskId, String filePath) {
+    public void requestNoiseProcessing(Users user, String taskId, String filePath) {
+        String fileTypeString = "other";
+        FileType fileTypeEnum = FileType.UNKNOWN; // NotificationService용 Enum
+
+        // Add fileType hint to let Python server decide pipeline (image/video/audio)
+        String lower = filePath.toLowerCase();
+        if (lower.endsWith(".mp4") || lower.endsWith(".mov") || lower.endsWith(".mkv") || lower.endsWith(".avi")) {
+            fileTypeString = "video";
+            fileTypeEnum = FileType.VIDEO;
+        } else if (lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png") || lower.endsWith(".bmp") || lower.endsWith(".gif")) {
+            fileTypeString = "image";
+            fileTypeEnum = FileType.IMAGE;
+        } else if (lower.endsWith(".wav") || lower.endsWith(".mp3") || lower.endsWith(".flac")) {
+            fileTypeString = "audio";
+            fileTypeEnum = FileType.AUDIO;
+        }
+
         try {
             logger.info("[{}] Sending audio to protection service", taskId);
 
             MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
             body.add("file", new FileSystemResource(new File(filePath)));
 
-            // Add fileType hint to let Python server decide pipeline (image/video/audio)
-            String lower = filePath.toLowerCase();
-            String fileType = "other";
-            if (lower.endsWith(".mp4") || lower.endsWith(".mov") || lower.endsWith(".mkv") || lower.endsWith(".avi")) {
-                fileType = "video";
-            } else if (lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png") || lower.endsWith(".bmp") || lower.endsWith(".gif")) {
-                fileType = "image";
-            } else if (lower.endsWith(".wav") || lower.endsWith(".mp3") || lower.endsWith(".flac")) {
-                fileType = "audio";
-            }
-            body.add("fileType", fileType);
+            body.add("fileType", fileTypeString);
             body.add("taskId", taskId);  // Pass backend taskId to AI
 
             HttpHeaders headers = new HttpHeaders();
@@ -71,8 +83,29 @@ public class AiService {
 
             logger.info("[{}] Protection response: {}", taskId, response.getBody());
 
-        } catch (Exception e) {
+            // [추가] 성공 알림 발송 (200 OK 인 경우)
+//            if (response.getStatusCode().is2xxSuccessful()) {
+//                notificationService.createNotification(
+//                        user,
+//                        taskId,
+//                        Status.SUCCESS,
+//                        taskId + "_protected", // 결과 파일명 예시
+//                        fileTypeEnum,
+//                        "AI 보호 처리가 완료되었습니다."
+//                );
+//            }
+        }
+        catch (Exception e) {
             logger.error("[{}] Error calling protection service", taskId, e);
+            // [추가] 실패 알림 발송
+//            notificationService.createNotification(
+//                    user,
+//                    taskId,
+//                    Status.FAILED,
+//                    taskId + "_original",
+//                    fileTypeEnum,
+//                    "AI 처리 중 오류가 발생했습니다."
+//            );
             throw new RuntimeException("Failed to protect audio: " + e.getMessage());
         }
     }
