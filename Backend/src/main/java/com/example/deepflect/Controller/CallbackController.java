@@ -59,7 +59,8 @@ public class CallbackController {
         }
 
         // 알림 생성
-        createNotificationForTask(dto.getTaskId(), Status.SUCCESS, "Upload and noise insertion completed");
+//        createNotificationForTask(dto.getTaskId(), Status.SUCCESS, "Upload and noise insertion completed");
+        createNotificationForTask(dto.getTaskId(), Status.SUCCESS, "파일 보호 처리가 완료되었습니다.");
 
         return ResponseEntity.ok("finished");
     }

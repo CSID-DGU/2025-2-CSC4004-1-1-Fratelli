@@ -46,6 +46,9 @@ public class FileService {
     FilesRepository filesRepository;
 
     @Autowired
+    NotificationService notificationService;
+
+    @Autowired
     UsersRepository usersRepository;
 
     public String saveOriginalFile(MultipartFile file, Users user, String taskId) {
