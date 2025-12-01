@@ -22,6 +22,9 @@ public class NotificationService {
     @Autowired
     NotificationRepository notificationRepository;
 
+    @Autowired
+    FcmService fcmService;
+
     /**
      * 알림 생성 (파일 변환 완료/실패 시 호출)
      */
@@ -37,6 +40,11 @@ public class NotificationService {
         notification.setTimestamp(new Timestamp(System.currentTimeMillis()));
         
         notificationRepository.save(notification);
+        fcmService.sendNotificationToUser(user, "파일 변환 성공", "파일 변환에 성공하였습니다.");
+//        if (notification.getStatus().equals(Status.SUCCESS)) {
+//            fcmService.sendNotificationToUser(user, "파일 변환 성공", "파일 변환에 성공하였습니다.");
+//        }
+
     }
 
     /**
@@ -61,7 +69,7 @@ public class NotificationService {
      * Entity -> DTO 변환
      */
     private NotificationDTO convertToDTO(Notification notification) {
-        NotificationDTO dto = new NotificationDTO();
+        NotificationDTO dto = new NotificationDTO(notification.getId());
         dto.setTaskId(notification.getTaskId());
         dto.setStatus(notification.getStatus() != null ? notification.getStatus().getValue() : "");
         dto.setFileName(notification.getFileName() != null ? notification.getFileName() : "");

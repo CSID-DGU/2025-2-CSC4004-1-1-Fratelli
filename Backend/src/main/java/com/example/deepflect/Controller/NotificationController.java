@@ -53,6 +53,16 @@ public class NotificationController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/myNotification/{notificationId}")
+    public ResponseEntity<String> getNotification(@PathVariable("notificationId") Long notificationId) {
+        try {
+            notificationService.deleteNotification(notificationId);
+            return ResponseEntity.ok("OK");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to delete notification");
+        }
+    }
+
     /**
      * 알림 삭제
      * DELETE /api/v1/notification/myNotification/{id}
