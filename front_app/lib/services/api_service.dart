@@ -278,11 +278,14 @@ class ApiService {
       print('요청 데이터: $data');
       
       final isRegisterEndpoint = endpoint.contains('/auth/register');
+      final isPasswordResetEndpoint = endpoint.contains('/auth/password-reset');
       final response = await _dio.post(
         endpoint,
         data: data,
         options: Options(
-          responseType: isRegisterEndpoint ? ResponseType.plain : ResponseType.json,
+          responseType: (isRegisterEndpoint || isPasswordResetEndpoint) 
+              ? ResponseType.plain 
+              : ResponseType.json,
           validateStatus: (status) {
             return status != null && status < 500;
           },
@@ -310,7 +313,10 @@ class ApiService {
       print('응답 상태 코드: ${e.response?.statusCode}');
       
       if (e.type == DioExceptionType.unknown && e.error is FormatException) {
-        if (e.response != null && (e.response!.statusCode == 200 || e.response!.statusCode == 201)) {
+        if (e.response != null && 
+            (e.response!.statusCode == 200 || 
+             e.response!.statusCode == 201 || 
+             e.response!.statusCode == 204)) {
           return e.response!;
         }
         throw Exception('서버 응답 형식 오류: ${e.error}');
