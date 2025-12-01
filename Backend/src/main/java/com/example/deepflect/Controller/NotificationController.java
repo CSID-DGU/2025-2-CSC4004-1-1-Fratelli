@@ -77,22 +77,4 @@ public class NotificationController {
         }
     }
 
-    @PostMapping("/send")
-    public ResponseEntity<?> send(
-            @RequestParam("email") String email,
-            @RequestParam("title") String title,
-            @RequestParam("body") String body
-    ) {
-        Users user = usersRepository.findByEmail(email)
-                .orElse(null);
-
-        if (user == null) {
-            return ResponseEntity.badRequest().body("User not found");
-        }
-
-        fcmService.sendNotificationToUser(user, title, body);
-
-        return ResponseEntity.ok("Notification Sent");
-    }
-
 }
