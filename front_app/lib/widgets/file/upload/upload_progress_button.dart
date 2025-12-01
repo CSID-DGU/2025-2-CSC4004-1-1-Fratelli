@@ -135,7 +135,7 @@ class UploadProgressButton extends StatelessWidget {
 
           Positioned(
             left: 52,
-            right: status == UploadStatus.done ? 100 : 120,
+            right: status == UploadStatus.done ? 110 : 130,
             top: status == UploadStatus.uploading ? 15 : 22,
             child: Text(
               fileName,
@@ -152,11 +152,11 @@ class UploadProgressButton extends StatelessWidget {
           ),
           
           Positioned(
-            left: status == UploadStatus.done ? null : 200,
+            left: status == UploadStatus.done ? null : 210,
             right: status == UploadStatus.done ? 50 : null,
             top: status == UploadStatus.uploading ? 15 : 22,
             child: Transform.translate(
-              offset: const Offset(0, 2),
+              offset: const Offset(0, 0),
               child: Text(
                 fileSize,
                 maxLines: 1,
@@ -182,7 +182,7 @@ class UploadProgressButton extends StatelessWidget {
           if (rightIcon != null)
             Positioned(
               right: 8,
-              top: 10,
+              top: 8,
               child: rightIcon,
             ),
 

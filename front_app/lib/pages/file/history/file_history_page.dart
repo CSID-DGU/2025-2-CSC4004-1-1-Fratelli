@@ -318,50 +318,131 @@ class FileHistoryPageState extends ConsumerState<FileHistoryPage> {
                           onLongPress: () {
                             showDialog(
                               context: context,
-                              builder: (context) => AlertDialog(
-                                title: Text('파일 옵션', style: GoogleFonts.k2d()),
-                                content: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    ListTile(
-                                      leading: const Icon(
-                                        Icons.download_outlined,
-                                        color: Colors.deepPurple,
-                                      ),
-                                      title: Text(
-                                        '다운로드',
-                                        style: GoogleFonts.k2d(),
-                                      ),
-                                      onTap: () {
-                                        Navigator.pop(context);
-                                        _downloadFile(taskId, fileName);
-                                      },
-                                    ),
-                                    ListTile(
-                                      leading: const Icon(
-                                        Icons.delete_outline,
-                                        color: Colors.red,
-                                      ),
-                                      title: Text(
-                                        '삭제',
-                                        style: GoogleFonts.k2d(
-                                          color: Colors.red,
-                                        ),
-                                      ),
-                                      onTap: () {
-                                        Navigator.pop(context);
-                                        _deleteFile(taskId, index);
-                                      },
-                                    ),
-                                  ],
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    child: Text('취소', style: GoogleFonts.k2d()),
+                              barrierColor: Colors.black.withOpacity(0.5),
+                              builder: (BuildContext dialogContext) {
+                                return AlertDialog(
+                                  backgroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
                                   ),
-                                ],
-                              ),
+                                  contentPadding: const EdgeInsets.only(
+                                    left: 24,
+                                    right: 24,
+                                    top: 28,
+                                    bottom: 20,
+                                  ),
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Stack(
+                                        clipBehavior: Clip.none,
+                                        children: [
+                                          Center(
+                                            child: Text(
+                                              '파일 옵션',
+                                              style: GoogleFonts.k2d(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.w600,
+                                                color: const Color(0xFF1D0523),
+                                              ),
+                                            ),
+                                          ),
+                                          Positioned(
+                                            right: -20,
+                                            top: -20,
+                                            child: IconButton(
+                                              icon: const Icon(
+                                                Icons.close,
+                                                color: Color(0xFF1D0523),
+                                                size: 20,
+                                              ),
+                                              onPressed: () => Navigator.of(dialogContext).pop(),
+                                              padding: EdgeInsets.zero,
+                                              constraints: const BoxConstraints(),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 24),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: ElevatedButton(
+                                              onPressed: () {
+                                                Navigator.of(dialogContext).pop();
+                                                _downloadFile(taskId, fileName);
+                                              },
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Color.fromRGBO(39, 0, 93, 1),
+                                                foregroundColor: Colors.white,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(10.0),
+                                                ),
+                                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                              ),
+                                              child: Row(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  const Icon(
+                                                    Icons.download_outlined,
+                                                    size: 18,
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Text(
+                                                    '다운로드',
+                                                    style: GoogleFonts.k2d(
+                                                      fontSize: 15,
+                                                      fontWeight: FontWeight.w500,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: ElevatedButton(
+                                              onPressed: () {
+                                                Navigator.of(dialogContext).pop();
+                                                _deleteFile(taskId, index);
+                                              },
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.white,
+                                                foregroundColor: Colors.red,
+                                                side: const BorderSide(
+                                                  color: Colors.red,
+                                                  width: 1.0,
+                                                ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(10.0),
+                                                ),
+                                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                              ),
+                                              child: Row(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  const Icon(
+                                                    Icons.delete_outline,
+                                                    size: 18,
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Text(
+                                                    '삭제',
+                                                    style: GoogleFonts.k2d(
+                                                      fontSize: 15,
+                                                      fontWeight: FontWeight.w500,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
                             );
                           },
                           child: Container(
