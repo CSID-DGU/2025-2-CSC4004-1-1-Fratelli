@@ -153,7 +153,7 @@ public class AuthController {
     public String showResetPasswordPage(@RequestParam("token") String token, Model model) {
         boolean isValid = passwordResetService.validateToken(token);
         if (!isValid) {
-            return "invalid-reset-password"; // 유효하지 않은 토큰일 경우 에러 페이지
+            return "invalid-token"; // 유효하지 않은 토큰일 경우 에러 페이지
         }
         model.addAttribute("token", token);
         return "reset-password"; // 비밀번호 입력 폼 HTML
