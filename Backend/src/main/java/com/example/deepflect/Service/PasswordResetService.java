@@ -51,7 +51,7 @@ public class PasswordResetService {
 
         passwordResetTokenRepository.save(resetToken);
 
-        String link = "http://localhost:8080/api/v1/auth/password-reset?token=" + token;
+        String link = "http://localhost:8080/api/v1/auth/reset-password?token=" + token;
 
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(email);
