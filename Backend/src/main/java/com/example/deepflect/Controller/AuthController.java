@@ -13,12 +13,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 import java.util.Optional;
 
-@RestController
+@Controller
 @RequestMapping("/api/v1/auth")
 public class AuthController {
 
@@ -146,15 +148,39 @@ public class AuthController {
         return ResponseEntity.ok("비밀번호 재설정 이메일이 발송되었습니다.");
     }
 
-    @GetMapping("/password-reset")
-    public ResponseEntity<String> showResetPasswordPage(@RequestParam("token") String token) {
+    // 2. 비밀번호 재설정 페이지 보여주기 (이메일 링크 클릭 시 이동)
+    @GetMapping("/reset-password")
+    public String showResetPasswordPage(@RequestParam("token") String token, Model model) {
         boolean isValid = passwordResetService.validateToken(token);
         if (!isValid) {
-            return ResponseEntity.badRequest().body("유효하지 않은 토큰입니다.");
+            return "invalid-reset-password"; // 유효하지 않은 토큰일 경우 에러 페이지
         }
-        // 토큰이 유효하면 비밀번호 재설정 페이지 표시
-        return ResponseEntity.ok("비밀번호 재설정 페이지 표시");
+        model.addAttribute("token", token);
+        return "reset-password"; // 비밀번호 입력 폼 HTML
     }
+
+    // 3. 비밀번호 변경 처리
+    @PostMapping("/reset-password")
+    public String resetPassword(@RequestParam("token") String token,
+                                @RequestParam("newPassword") String newPassword,
+                                @RequestParam("confirmPassword") String confirmPassword) {
+
+        // 비밀번호 일치 확인
+        if (!newPassword.equals(confirmPassword)) {
+            // 수정: 리다이렉트 주소를 /reset-password로 맞춤
+            return "not-equal-password";
+        }
+
+        try {
+            passwordResetService.resetPassword(token, newPassword);
+        } catch (RuntimeException e) {
+            // 예외 발생 시(토큰 만료 등) 다시 에러 페이지나 폼으로 리다이렉트
+            return "invalid-token";
+        }
+
+        return "success";
+    }
+
 
     @DeleteMapping("/quit")
     public ResponseEntity<?> deleteUser() {
