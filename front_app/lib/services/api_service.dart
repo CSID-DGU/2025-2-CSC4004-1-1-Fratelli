@@ -241,17 +241,32 @@ class ApiService {
   }
 
   Future<Response> deleteWithAuth(String endpoint, {dynamic data}) async {
-    return _requestWithAutoRefresh(
-      (accessToken) => _dio.delete(
-        endpoint,
-        data: data,
-        options: Options(
-          headers: {
-            'Authorization': 'Bearer $accessToken',
-          },
+    try {
+      return await _requestWithAutoRefresh(
+        (accessToken) => _dio.delete(
+          endpoint,
+          data: data,
+          options: Options(
+            headers: {
+              'Authorization': 'Bearer $accessToken',
+            },
+            responseType: ResponseType.plain,
+            validateStatus: (status) {
+              return status != null && status < 500;
+            },
+          ),
         ),
-      ),
-    );
+      );
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.unknown && e.error is FormatException) {
+        if (e.response != null && 
+            (e.response!.statusCode == 200 || e.response!.statusCode == 204)) {
+          return e.response!;
+        }
+        throw Exception('서버 응답 형식 오류: ${e.error}');
+      }
+      rethrow;
+    }
   }
 
   // 토큰 없이 요청

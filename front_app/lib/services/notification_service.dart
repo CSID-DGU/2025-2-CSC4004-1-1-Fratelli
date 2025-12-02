@@ -62,7 +62,7 @@ class NotificationService {
       print('응답 상태 코드: ${response.statusCode}');
       print('응답 데이터: ${response.data}');
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 204) {
         print('알림 삭제 성공');
       } else {
         throw Exception('알림 삭제 실패: ${response.statusMessage}');
