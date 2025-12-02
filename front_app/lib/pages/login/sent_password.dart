@@ -37,13 +37,21 @@ class SentPasswordPage extends StatelessWidget {
                   Text(
                     email,
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 18, color: Color.fromRGBO(148, 0, 255, 1.0)),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontFamily: 'K2D',
+                      color: Color.fromRGBO(148, 0, 255, 1.0)
+                    ),
                   ),
                   SizedBox(height: 8),
                   Text(
                     "비밀번호 재설정 메일이 발송되었습니다.",
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 18, color: Color.fromRGBO(191, 157, 238, 1.0)),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontFamily: 'K2D',
+                      color: Color.fromRGBO(191, 157, 238, 1.0)
+                    ),
                   ),
                 ],
               ),
@@ -68,7 +76,10 @@ class SentPasswordPage extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10.0),
                   ),
                 ),
-                child: Text("확인"),
+                child: Text(
+                  "확인",
+                  style: TextStyle(fontFamily: 'K2D'),
+                ),
               ),
             ],
           ),

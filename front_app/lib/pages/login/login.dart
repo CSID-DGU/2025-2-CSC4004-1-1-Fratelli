@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:deepflect_app/models/auth/auth_provider.dart';
+import 'package:deepflect_app/models/auth/auth.dart';
 import 'package:deepflect_app/pages/home/home_page.dart';
 import 'package:deepflect_app/pages/login/sign_up.dart';
 import 'package:deepflect_app/widgets/login/full_form_input.dart';
@@ -19,6 +20,7 @@ class LoginMain extends ConsumerStatefulWidget {
 class _LoginMainState extends ConsumerState<LoginMain> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  bool _hasShownSuccessMessage = false;
 
   @override
   void dispose() {
@@ -48,36 +50,43 @@ class _LoginMainState extends ConsumerState<LoginMain> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authNotifierProvider);
 
-    // 로그인 성공
-    if (authState.isAuthenticated) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('로그인 성공!'),
-            backgroundColor: Color.fromARGB(255, 57, 132, 58),
-          ),
-        );
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (context) => const HomePage(),
-          ),
-          (route) => false, 
-        );
-      });
-    }
-
-    // 에러 처리
-    if (authState.error != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(authState.error!),
-            backgroundColor: Colors.red,
-          ),
-        );
-        ref.read(authNotifierProvider.notifier).clearError();
-      });
-    }
+    // 로그인 성공 처리 (한 번만 실행)
+    ref.listen<AuthState>(authNotifierProvider, (previous, next) {
+      if (next.isAuthenticated && !_hasShownSuccessMessage) {
+        _hasShownSuccessMessage = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('로그인 성공!'),
+                backgroundColor: Color.fromARGB(255, 57, 132, 58),
+              ),
+            );
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(
+                builder: (context) => const HomePage(),
+              ),
+              (route) => false, 
+            );
+          }
+        });
+      }
+      
+      // 에러 처리
+      if (next.error != null && (previous == null || previous.error != next.error)) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(next.error!),
+                backgroundColor: Colors.red,
+              ),
+            );
+            ref.read(authNotifierProvider.notifier).clearError();
+          }
+        });
+      }
+    });
 
     final screenHeight = MediaQuery.of(context).size.height;
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
