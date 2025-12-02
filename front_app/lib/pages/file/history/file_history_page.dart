@@ -1,0 +1,519 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:deepflect_app/widgets/file/history/filter_button.dart';
+import 'package:deepflect_app/services/file_service.dart';
+import 'package:deepflect_app/services/token_storage.dart';
+import 'package:deepflect_app/models/auth/auth_provider.dart';
+
+class FileHistoryPage extends ConsumerStatefulWidget {
+  final GlobalKey<FileHistoryPageState>? stateKey;
+
+  const FileHistoryPage({super.key, this.stateKey});
+
+  @override
+  ConsumerState<FileHistoryPage> createState() => FileHistoryPageState();
+}
+
+class FileHistoryPageState extends ConsumerState<FileHistoryPage> {
+  final FileService _fileService = FileService();
+  int selectedTab = 0;
+  final List<String> tabs = ['ALL', '사진', '동영상'];
+  List<Map<String, dynamic>> files = [];
+  bool _isLoading = true;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAuthAndLoadFiles();
+    });
+  }
+
+  void refresh() {
+    _checkAuthAndLoadFiles();
+  }
+
+  Future<void> _checkAuthAndLoadFiles() async {
+    final authState = ref.read(authNotifierProvider);
+    final hasToken = await TokenStorage.hasTokens();
+
+    if (!authState.isAuthenticated && !hasToken) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = '로그인이 필요합니다.';
+        });
+      }
+      return;
+    }
+
+    _loadFiles();
+  }
+
+  Future<void> _loadFiles() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      String? type;
+      if (selectedTab == 1) {
+        type = 'IMAGE';
+      } else if (selectedTab == 2) {
+        type = 'VIDEO';
+      }
+
+      final fetchedFiles = await _fileService.getFiles(type: type);
+
+      if (mounted) {
+        setState(() {
+          files = fetchedFiles;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        final errorMsg = e.toString().replaceAll('Exception: ', '');
+        setState(() {
+          _errorMessage = errorMsg;
+          _isLoading = false;
+        });
+
+        if (errorMsg.contains('액세스 토큰') || errorMsg.contains('로그인')) {
+          final authState = ref.read(authNotifierProvider);
+          if (!authState.isAuthenticated) {
+            setState(() {
+              _errorMessage = '로그인이 필요합니다.';
+            });
+          }
+        }
+      }
+    }
+  }
+
+  Future<void> _deleteFile(String taskId, int index) async {
+    try {
+      await _fileService.deleteFile(taskId);
+      if (mounted) {
+        setState(() {
+          files.removeAt(index);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('파일이 삭제되었습니다.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '파일 삭제 실패: ${e.toString().replaceAll('Exception: ', '')}',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _downloadFile(String taskId, String fileName) async {
+    if (taskId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('다운로드할 수 없는 파일입니다.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$fileName 다운로드를 시작합니다.'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+
+      final savedPath = await _fileService.downloadFile(taskId, fileName);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('파일이 저장되었습니다: $savedPath'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '다운로드 실패: ${e.toString().replaceAll('Exception: ', '')}',
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '히스토리',
+                    style: GoogleFonts.k2d(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF1D0523),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: List.generate(tabs.length, (i) {
+                      return Expanded(
+                        child: Padding(
+                          padding: EdgeInsets.only(
+                            right: i < tabs.length - 1 ? 8 : 0,
+                          ),
+                          child: FilterButton(
+                            title: tabs[i],
+                            isSelected: selectedTab == i,
+                            onTap: () {
+                              setState(() {
+                                selectedTab = i;
+                              });
+                              _loadFiles(); // 탭 변경 시 파일 다시 로드
+                            },
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF27005D),
+                      ),
+                    )
+                  : _errorMessage != null
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            size: 48,
+                            color: Colors.red[300],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            _errorMessage!,
+                            style: GoogleFonts.k2d(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: _loadFiles,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF27005D),
+                              foregroundColor: Colors.white,
+                            ),
+                            child: const Text('다시 시도'),
+                          ),
+                        ],
+                      ),
+                    )
+                  : files.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.folder_open,
+                            size: 64,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            '업로드한 파일이 없습니다',
+                            style: GoogleFonts.k2d(
+                              fontSize: 16,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : GridView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            childAspectRatio: 1,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                          ),
+                      itemCount: files.length,
+                      itemBuilder: (context, index) {
+                        final file = files[index];
+                        final taskId = file['taskId']?.toString() ?? '';
+                        final fileName =
+                            file['fileName']?.toString() ??
+                            file['name']?.toString() ??
+                            'unknown';
+                        final fileType = file['fileType']
+                                ?.toString()
+                                .toUpperCase() ??
+                            file['type']?.toString().toUpperCase() ??
+                            '';
+                        final thumbnailUrl = file['thumbnailUrl']?.toString();
+                        final previewUrl = fileType == 'VIDEO' &&
+                                thumbnailUrl != null &&
+                                thumbnailUrl.isNotEmpty
+                            ? thumbnailUrl
+                            : file['url']?.toString();
+
+                        final colors = [
+                          Colors.blue[200]!,
+                          Colors.green[200]!,
+                          Colors.orange[200]!,
+                          Colors.purple[200]!,
+                          Colors.red[200]!,
+                          Colors.teal[200]!,
+                        ];
+
+                        final color = colors[index % colors.length];
+
+                        return GestureDetector(
+                          onTap: () async {
+                            _downloadFile(taskId, fileName);
+                          },
+                          onLongPress: () {
+                            showDialog(
+                              context: context,
+                              barrierColor: Colors.black.withOpacity(0.5),
+                              builder: (BuildContext dialogContext) {
+                                return AlertDialog(
+                                  backgroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  contentPadding: const EdgeInsets.only(
+                                    left: 24,
+                                    right: 24,
+                                    top: 28,
+                                    bottom: 20,
+                                  ),
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Stack(
+                                        clipBehavior: Clip.none,
+                                        children: [
+                                          Center(
+                                            child: Text(
+                                              '파일 옵션',
+                                              style: GoogleFonts.k2d(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.w600,
+                                                color: const Color(0xFF1D0523),
+                                              ),
+                                            ),
+                                          ),
+                                          Positioned(
+                                            right: -20,
+                                            top: -20,
+                                            child: IconButton(
+                                              icon: const Icon(
+                                                Icons.close,
+                                                color: Color(0xFF1D0523),
+                                                size: 20,
+                                              ),
+                                              onPressed: () => Navigator.of(dialogContext).pop(),
+                                              padding: EdgeInsets.zero,
+                                              constraints: const BoxConstraints(),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 24),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: ElevatedButton(
+                                              onPressed: () {
+                                                Navigator.of(dialogContext).pop();
+                                                _downloadFile(taskId, fileName);
+                                              },
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Color.fromRGBO(39, 0, 93, 1),
+                                                foregroundColor: Colors.white,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(10.0),
+                                                ),
+                                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                              ),
+                                              child: Row(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  const Icon(
+                                                    Icons.download_outlined,
+                                                    size: 18,
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Text(
+                                                    '다운로드',
+                                                    style: GoogleFonts.k2d(
+                                                      fontSize: 15,
+                                                      fontWeight: FontWeight.w500,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: ElevatedButton(
+                                              onPressed: () {
+                                                Navigator.of(dialogContext).pop();
+                                                _deleteFile(taskId, index);
+                                              },
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.white,
+                                                foregroundColor: Colors.red,
+                                                side: const BorderSide(
+                                                  color: Colors.red,
+                                                  width: 1.0,
+                                                ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(10.0),
+                                                ),
+                                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                              ),
+                                              child: Row(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  const Icon(
+                                                    Icons.delete_outline,
+                                                    size: 18,
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Text(
+                                                    '삭제',
+                                                    style: GoogleFonts.k2d(
+                                                      fontSize: 15,
+                                                      fontWeight: FontWeight.w500,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              color: color,
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  previewUrl != null && previewUrl.isNotEmpty
+                                      ? Image.network(
+                                          previewUrl,
+                                          fit: BoxFit.cover,
+                                          errorBuilder:
+                                              (context, error, stackTrace) {
+                                                return _buildPlaceholder(
+                                                  fileName,
+                                                  color,
+                                                );
+                                              },
+                                        )
+                                      : _buildPlaceholder(fileName, color),
+                                  if (fileType == 'VIDEO')
+                                    Center(
+                                      child: Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withOpacity(0.5),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(
+                                          Icons.play_arrow,
+                                          color: Colors.white,
+                                          size: 24,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlaceholder(String fileName, Color color) {
+    return Container(
+      color: color,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.image, size: 50, color: Colors.black54),
+          const SizedBox(height: 8),
+          Text(
+            fileName.length > 10 ? '${fileName.substring(0, 10)}...' : fileName,
+            style: GoogleFonts.k2d(fontSize: 10, color: Colors.grey[600]),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+}
