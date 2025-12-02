@@ -4,6 +4,8 @@ import 'package:deepflect_app/pages/mypage/my_page.dart';
 import 'package:deepflect_app/pages/file/upload/file_upload_page.dart';
 import 'package:deepflect_app/pages/file/history/file_history_page.dart';
 import 'package:deepflect_app/widgets/home/custom_navigation_bar.dart';
+import 'package:deepflect_app/models/auth/auth_provider.dart';
+import 'package:deepflect_app/pages/login/landing.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -34,6 +36,23 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authNotifierProvider);
+    
+    // 인증되지 않은 경우 랜딩 페이지로 리다이렉트
+    if (!authState.isAuthenticated) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const LandingPage()),
+          (route) => false,
+        );
+      });
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
     return Scaffold(
       body: _pages[_currentIndex],
       bottomNavigationBar: CustomNavigationBar(

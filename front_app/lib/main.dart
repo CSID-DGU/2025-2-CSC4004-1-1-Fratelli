@@ -12,6 +12,7 @@ void main() async {
   // Firebase 초기화
   try {
     await Firebase.initializeApp(
+      name: "deepflect_app",
       options: DefaultFirebaseOptions.currentPlatform,
     );
     print('Firebase 초기화 성공');
@@ -40,6 +41,7 @@ class DeepflectApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Deepflect App',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         scaffoldBackgroundColor: Colors.white,
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),

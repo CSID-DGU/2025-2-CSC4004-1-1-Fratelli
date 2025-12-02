@@ -4,6 +4,7 @@ import 'package:deepflect_app/services/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class NotificationItem {
+  final int notificationId;
   final String taskId;
   final String status;
   final String fileName;
@@ -12,6 +13,7 @@ class NotificationItem {
   final String timestamp;  // ISO8601 문자열
 
   NotificationItem({
+    required this.notificationId,
     required this.taskId,
     required this.status,
     required this.fileName,
@@ -21,6 +23,11 @@ class NotificationItem {
   });
 
   factory NotificationItem.fromJson(Map<String, dynamic> json) {
+    final notificationId = json['notificationId'] is int 
+        ? json['notificationId'] as int
+        : (json['notificationId'] != null 
+            ? int.tryParse(json['notificationId'].toString()) ?? 0 
+            : 0);
     final taskId = json['taskId']?.toString() ?? '';
     final status = json['status']?.toString() ?? '';
     final fileName = json['fileName']?.toString() ?? '';
@@ -30,6 +37,7 @@ class NotificationItem {
         json['timestamp']?.toString() ?? DateTime.now().toIso8601String();
 
     return NotificationItem(
+      notificationId: notificationId,
       taskId: taskId,
       status: status,
       fileName: fileName,
@@ -147,13 +155,13 @@ class _NotificationScreenState extends State<NotificationScreen>
 
     for (final item in expired) {
       try {
-        await _notificationService.deleteNotification(item.taskId);
+        await _notificationService.deleteNotification(item.notificationId.toString());
       } catch (e) {
-        debugPrint('만료 알림 삭제 실패(${item.taskId}): $e');
+        debugPrint('만료 알림 삭제 실패(${item.notificationId}): $e');
       }
     }
 
-    items.removeWhere((item) => expired.any((exp) => exp.taskId == item.taskId));
+    items.removeWhere((item) => expired.any((exp) => exp.notificationId == item.notificationId));
   }
 
   // 날짜 형식 변환
@@ -220,7 +228,7 @@ class _NotificationScreenState extends State<NotificationScreen>
     }
 
     final selectedIds =
-        selectedIndices.map((index) => notifications[index].taskId).toList();
+        selectedIndices.map((index) => notifications[index].notificationId.toString()).toList();
     
     // 서버에 삭제 요청
     bool allSuccess = true;
