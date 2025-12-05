@@ -1,7 +1,7 @@
 ## **디렉토리 구조**
 
 ```
-external_user/
+user/
  ├─ protect.py 
  ├─ perturbation.pt 
  ├─ setting.json
