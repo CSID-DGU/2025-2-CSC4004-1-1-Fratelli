@@ -16,7 +16,7 @@ portable/
  ├─ sample_original_frame.png  → 영상 노이즈 비교 테스트용 샘플 (영상 보호 처리 시 생성됨)
  ├─ sample_protected_frame.png → 영상 노이즈 비교 테스트용 샘플 (영상 보호 처리 시 생성됨)
  │
- ├─ input/   → 중요한 점 : **입력 이미지 및 영상은 256×256 고정**
+ ├─ input/   → 중요한 점 : 입력 이미지 및 영상은 256×256 고정
  └─ output/
 ```
 
