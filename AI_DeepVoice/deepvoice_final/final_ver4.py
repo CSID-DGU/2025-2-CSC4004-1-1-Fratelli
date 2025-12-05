@@ -576,8 +576,8 @@ class HighQualityVoiceProtection:
 
 
 def main():
-    input_file = "original_audio.wav"
-    output_file = "protected_audio.wav"
+    input_file = "original.wav"
+    output_file = "protected.wav"
     
     if len(sys.argv) >= 2:
         input_file = sys.argv[1]
