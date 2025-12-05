@@ -38,7 +38,7 @@ conda activate "$ENV_NAME"
 # 5) requirements.txt 설치
 if [ ! -f "requirements.txt" ]; then
   echo "[!] requirements.txt 파일을 찾을 수 없습니다."
-  echo "    이 스크립트와 같은 폴더에 requirements.txt를 두고 실행하세요."
+  echo "    이 스크립트와 같은 폴더에 requirements.txt를 두고 처음부터 다시 실행하세요."
   exit 1
 fi
 
