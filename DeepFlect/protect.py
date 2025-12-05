@@ -25,15 +25,12 @@ def get_transform(size):
     ])
 
 
-# -----------------------------
-# ε 옵션 추가된 perturbation 적용 함수
-# -----------------------------
+
 def apply_perturbation(img_path, out_path, up, size, eps_scale):
     tf = get_transform(size)
     img = Image.open(img_path).convert("RGB")
     img_t = tf(img).unsqueeze(0)
 
-    # 원본 코드: protected = img + up
     # ε 적용 코드: protected = img + eps_scale * up
     protected = img_t + eps_scale * up
     protected = torch.clamp(protected, -1, 1)
