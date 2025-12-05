@@ -1,7 +1,7 @@
 """
 Enhanced Robust Voice Protection System v3.0 - High Quality Edition (Fixed)
 ============================================================================
-음질 보존을 극대화한 버전 - Conv1d 차원 버그 수정
+음질 보존을 극대화한 버전 
 """
 
 import torch
