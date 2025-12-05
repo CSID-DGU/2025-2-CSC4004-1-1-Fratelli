@@ -2,8 +2,8 @@
 
 ```
 ex_user/
- ├─ protect.py
- ├─ perturbation.pt
+ ├─ protect.py 
+ ├─ perturbation.pt 
  ├─ setting.json
  │
  ├─ requirements.txt
@@ -17,14 +17,14 @@ ex_user/
  ├─ sample_protected_frame.png → 영상 노이즈 비교 테스트용 샘플 (영상 보호 처리 시 생성됨)
  │
  ├─ input/   → 중요한 점 : 입력 이미지 및 영상은 256×256 고정
- └─ output/
+ └─ output/  → protected results 저장
 ```
 
 ---
 
 ## **입력 데이터 사이즈 변경 (터미널에서 실행)**
 
-### **영상 256×256 고정 + 고화질 유지**
+### **영상 256×256 고정**
 
 ```bash
 ffmpeg -i input.mp4 \
@@ -34,7 +34,7 @@ ffmpeg -i input.mp4 \
   origin_video.mp4
 ```
 
-### **이미지 256×256 고정 + 고화질 유지**
+### **이미지 256×256 고정**
 
 ```bash
 ffmpeg -i input.jpg \
@@ -49,7 +49,7 @@ ffmpeg -i input.jpg \
 
 ### **1) 설치**
 
-설치하려는 디렉토리로 이동 후 다음 실행:
+설치하려는 디렉토리로 이동 후 다음 실행
 
 ```bash
 chmod +x install.sh
