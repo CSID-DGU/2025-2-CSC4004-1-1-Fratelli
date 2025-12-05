@@ -1,7 +1,7 @@
 ## **디렉토리 구조**
 
 ```
-portable/
+ex_user/
  ├─ protect.py
  ├─ perturbation.pt
  ├─ setting.json
