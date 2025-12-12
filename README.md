@@ -2,3 +2,88 @@
 팀장 : 김현정 
 팀원 : 박서연, 유호준, 정세연
 
+DeepFlect (Fratelli) — Deepfake Protection Suite
+
+딥보이스(Voice Cloning) / 딥페이크(얼굴 합성) 위협으로부터 사용자 음성·영상 콘텐츠를 보호하기 위한 통합 프로젝트입니다.
+브라우저 확장/클라이언트 앱에서 보호를 요청하면, 백엔드와 AI 모듈이 음성·영상에 방어 처리를 적용하고 결과물을 반환하는 형태를 목표로 합니다.
+
+Repo: CSID-DGU/2025-2-CSC4004-1-1-Fratelli 
+GitHub
+
+✨ What’s inside
+
+AI(음성/영상) 방어 모듈: 음성 보호(perturbation), 얼굴/랜드마크 기반 방어 등 다양한 실험 모듈 포함
+
+Backend: 클라이언트(앱/확장) 요청을 받아 AI 모듈을 오케스트레이션
+
+Front App (Flutter): 사용자 UI/워크플로우 제공
+
+Front Extension (Browser Extension): 웹 환경에서 빠른 보호 적용/업로드 지원
+
+🧱 Repository Structure
+
+아래는 현재 저장소 루트에 존재하는 주요 폴더들입니다. 
+GitHub
+
+.
+├─ AI/                 # AI 관련 실험/유틸(프로젝트 구성에 따라 사용)
+├─ AI_DeepVoice/        # 음성 보호/딥보이스 방어 중심 모듈
+├─ Backend/             # 서버(API) 및 오케스트레이션
+├─ DeepFlect/           # 통합/핵심 모듈(프로젝트 구성에 따라 사용)
+├─ LandmarkBreaker/     # 얼굴 랜드마크 기반 방어/교란 실험
+├─ defend/              # 방어 관련 실험/스크립트
+├─ facetrack/           # 얼굴 추적/전처리 관련
+├─ front_app/           # Flutter 앱
+├─ front_extension/     # 브라우저 확장
+├─ submit/              # 제출용 산출물/패키징
+└─ README.md
+
+🚀 Quick Start (개발 환경)
+
+프로젝트가 멀티 모듈 구조라서, 보통 아래처럼 “모듈별로” 실행합니다.
+
+1) Backend 실행
+cd Backend
+# (프로젝트에 맞는 방식으로)
+# 예: pip install -r requirements.txt
+# 예: npm install
+# 예: ./gradlew bootRun
+
+2) AI 모듈 실행 (예: 음성 보호)
+cd AI_DeepVoice
+# 예: conda env create -f environment.yml  (있는 경우)
+# 또는 pip install -r requirements.txt
+# 이후 보호 스크립트 실행 (프로젝트 내 스크립트/옵션 확인)
+
+3) Front App (Flutter)
+cd front_app
+flutter pub get
+flutter run
+
+4) Front Extension (Browser Extension)
+
+front_extension/ 폴더를 Chrome/Edge 확장 프로그램 개발자 모드에서 “압축해제된 확장 프로그램 로드”로 등록합니다.
+
+🧩 How it works (권장 흐름)
+
+사용자(앱/확장)가 음성/영상 파일 업로드 또는 링크 입력
+
+Backend가 요청 수신 → 파일 저장/전처리
+
+Backend가 AI 모듈(음성 보호, 얼굴/랜드마크 방어 등) 호출
+
+결과물(Protected media) 반환 및 다운로드/재생 제공
+
+🛠️ Development Notes
+
+폴더별로 런타임/의존성이 다를 수 있어요(Python/Node/Java/Flutter 혼합 가능).
+
+팀 개발 시, 환경 파일(.env) / 모델 파일 / 대용량 데이터는 Git에 직접 올리기보다 별도 관리(Drive/Release/LFS 등) 권장.
+
+실험 스크립트가 많은 저장소는 docs/ 또는 루트에 SETUP.md, API.md를 추가하면 유지보수가 훨씬 쉬워져요.
+
+👥 Team
+
+팀장: 김현정
+
+팀원: 박서연, 유호준, 정세연 
