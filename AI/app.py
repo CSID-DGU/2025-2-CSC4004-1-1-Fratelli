@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 # FastAPI 앱 생성
 app = FastAPI(
     title="AI Video Protection Server",
-    description="동영상 오디오 보호 처리 서버",
+    description="이미지 및 동영상 보호 처리 서버",
     version="1.0.0"
 )
 
@@ -192,8 +192,8 @@ def _background_image_processing(task_id: str, image_path: str):
             pass
         
         # 랜덤으로 보호 방법 선택 (defend_stargan or protect)
-        use_defend_stargan = random.choice([True, False])
-        method_name = "defend_stargan" if use_defend_stargan else "protect (CMUA)"
+        # use_defend_stargan = random.choice([True, False])
+        method_name = "protect (CMUA)"
         
         print(f"[{task_id}] Step 1: Protecting image with {method_name}...")
         
@@ -206,33 +206,32 @@ def _background_image_processing(task_id: str, image_path: str):
             ext = '.png'
         output_image = os.path.join(OUTPUT_FOLDER, f"{task_id}_protected{ext}")
         
-        if use_defend_stargan:
-            # defend_stargan 사용
-            ckpt_path = os.path.join(os.path.dirname(__file__), 'deepfake', 'models', '30000-PG-005.ckpt')
-            if not os.path.exists(ckpt_path):
-                raise Exception(f"Checkpoint file not found: {ckpt_path}")
+        # if use_defend_stargan:
+        #     # defend_stargan 사용
+        #     ckpt_path = os.path.join(os.path.dirname(__file__), 'deepfake', 'models', '30000-PG-005.ckpt')
+        #     if not os.path.exists(ckpt_path):
+        #         raise Exception(f"Checkpoint file not found: {ckpt_path}")
             
-            defend_image(
-                input_path=image_path,
-                output_path=output_image,
-                ckpt_path=ckpt_path,
-                eps=0.10,
-                image_size=128,
-                device="cuda"
-            )
-        else:
+        #     defend_image(
+        #         input_path=image_path,
+        #         output_path=output_image,
+        #         ckpt_path=ckpt_path,
+        #         eps=0.10,
+        #         image_size=128,
+        #         device="cuda"
+        #     )
             # protect (CMUA) 사용
-            perturbation_path = os.path.join(os.path.dirname(__file__), 'deepfake', 'models', 'perturbation.pt')
-            if not os.path.exists(perturbation_path):
-                raise Exception(f"Perturbation file not found: {perturbation_path}")
-            
-            protect_image(
-                input_path=image_path,
-                output_path=output_image,
-                perturbation_path=perturbation_path,
-                eps=1.0,
-                image_size=224
-            )
+        perturbation_path = os.path.join(os.path.dirname(__file__), 'deepfake', 'models', 'perturbation.pt')
+        if not os.path.exists(perturbation_path):
+            raise Exception(f"Perturbation file not found: {perturbation_path}")
+        
+        protect_image(
+            input_path=image_path,
+            output_path=output_image,
+            perturbation_path=perturbation_path,
+            eps=1.0,
+            image_size=224
+        )
         
         print(f"[{task_id}] Image protected with {method_name}: {output_image}")
         
@@ -375,8 +374,8 @@ def _background_video_processing(task_id: str, video_path: str):
             pass
 
         # 3. 비디오 딥페이크 방어 (랜덤: defend_stargan or protect)
-        use_defend_stargan = random.choice([True, False])
-        method_name = "defend_stargan" if use_defend_stargan else "protect (CMUA)"
+        # use_defend_stargan = random.choice([True, False])
+        method_name = "protect (CMUA)"
         
         print(f"[{task_id}] Step 3: Protecting video with {method_name}...")
         
@@ -387,34 +386,18 @@ def _background_video_processing(task_id: str, video_path: str):
         # 임시 방어된 비디오 경로
         defended_video = os.path.join(UPLOAD_FOLDER, f"{task_id}_defended.mp4")
         
-        if use_defend_stargan:
-            # defend_stargan 사용
-            ckpt_path = os.path.join(os.path.dirname(__file__), 'deepfake', 'models', '30000-PG-005.ckpt')
-            if not os.path.exists(ckpt_path):
-                raise Exception(f"Checkpoint file not found: {ckpt_path}")
-            
-            defend_video(
-                input_path=video_path,
-                output_path=defended_video,
-                ckpt_path=ckpt_path,
-                eps=0.10,
-                image_size=128,
-                blend_alpha=0.6,
-                device="cuda"
-            )
-        else:
-            # protect (CMUA) 사용
-            perturbation_path = os.path.join(os.path.dirname(__file__), 'deepfake', 'models', 'perturbation.pt')
-            if not os.path.exists(perturbation_path):
-                raise Exception(f"Perturbation file not found: {perturbation_path}")
-            
-            protect_video(
-                input_path=video_path,
-                output_path=defended_video,
-                perturbation_path=perturbation_path,
-                eps=1.0,
-                image_size=224
-            )
+        # protect (CMUA) 사용
+        perturbation_path = os.path.join(os.path.dirname(__file__), 'deepfake', 'models', 'perturbation.pt')
+        if not os.path.exists(perturbation_path):
+            raise Exception(f"Perturbation file not found: {perturbation_path}")
+        
+        protect_video(
+            input_path=video_path,
+            output_path=defended_video,
+            perturbation_path=perturbation_path,
+            eps=1.0,
+            image_size=224
+        )
         
         print(f"[{task_id}] Video defended with {method_name}: {defended_video}")
         
@@ -508,7 +491,7 @@ def _background_video_processing(task_id: str, video_path: str):
 
 
 
-@app.post('/api/v1/process-file')
+@app.post('/api/v1/files/progress-file')
 async def process_file(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
