@@ -2,15 +2,44 @@
 팀장 : 김현정 
 팀원 : 박서연, 유호준, 정세연
 
-DeepFlect (Fratelli) — Deepfake Protection Suite
+# 본 프로젝트는 최근 급격히 발전한 딥보이스(Voice Cloning) 및 딥페이크(Deepfake) 기술이 가지는 실제적 위협에 대응하는 것을 핵심 목표로 합니다.
 
-딥보이스(Voice Cloning) / 딥페이크(얼굴 합성) 위협으로부터 사용자 음성·영상 콘텐츠를 보호하기 위한 통합 프로젝트입니다.
-브라우저 확장/클라이언트 앱에서 보호를 요청하면, 백엔드와 AI 모듈이 음성·영상에 방어 처리를 적용하고 결과물을 반환하는 형태를 목표로 합니다.
+1️⃣ DeepVoice (Voice Cloning) 위협
 
-Repo: CSID-DGU/2025-2-CSC4004-1-1-Fratelli 
-GitHub
+딥보이스 기술은 짧은 음성 샘플만으로도 특정 화자의 음색·억양·발화 습관을 학습하여, 마치 실제 화자가 말한 것처럼 고품질 음성을 생성할 수 있습니다.
+이로 인해 다음과 같은 문제가 발생합니다.
 
-✨ What’s inside
+> 1. 유명인·지인의 음성을 이용한 사기 전화 및 음성 스푸핑
+>
+> 2. 음성 인증 시스템(콜센터, 금융 ARS)의 신뢰성 붕괴
+>
+> 3. AI 음성 합성 기반 허위 발언 생성
+
+본 프로젝트에서는 단순히 **귀로 들었을 때 다른 음성**을 만드는 것이 아니라,
+
+**사람에게는 거의 구별되지 않지만,
+딥보이스 모델이 화자 특징을 정확히 추출하지 못하도록 방해하는 것** 을 목표로 합니다.
+
+### 🔐 DeepVoice 방어 접근 방식
+
+ECAPA-TDNN 기반 Speaker Embedding 공격
+
+Waveform 레벨에서 지각 불가능한 adversarial perturbation 추가
+
+음질(SNR, PESQ)을 최대한 유지하면서
+화자 임베딩 공간(feature space)에서 유사도 붕괴 유도
+
+다양한 음성 변환(랜덤 증강)을 포함한 Robust Optimization
+
+이를 통해,
+
+사람 귀 기준: 거의 동일한 음성
+
+AI 모델 기준: “다른 화자”로 인식
+
+하는 비대칭 방어 효과를 지향합니다.
+
+### ✨ What’s inside
 
 AI(음성/영상) 방어 모듈: 음성 보호(perturbation), 얼굴/랜드마크 기반 방어 등 다양한 실험 모듈 포함
 
@@ -20,7 +49,7 @@ Front App (Flutter): 사용자 UI/워크플로우 제공
 
 Front Extension (Browser Extension): 웹 환경에서 빠른 보호 적용/업로드 지원
 
-🧱 Repository Structure
+### 🧱 Repository Structure
 
 아래는 현재 저장소 루트에 존재하는 주요 폴더들입니다. 
 GitHub
