@@ -43,26 +43,14 @@ GitHub
 프로젝트가 멀티 모듈 구조라서, 보통 아래처럼 “모듈별로” 실행합니다.
 
 1) Backend 실행
-cd Backend
-# (프로젝트에 맞는 방식으로)
-# 예: pip install -r requirements.txt
-# 예: npm install
-# 예: ./gradlew bootRun
 
 2) AI 모듈 실행 (예: 음성 보호)
-cd AI_DeepVoice
-# 예: conda env create -f environment.yml  (있는 경우)
-# 또는 pip install -r requirements.txt
-# 이후 보호 스크립트 실행 (프로젝트 내 스크립트/옵션 확인)
 
 3) Front App (Flutter)
-cd front_app
-flutter pub get
-flutter run
+
 
 4) Front Extension (Browser Extension)
 
-front_extension/ 폴더를 Chrome/Edge 확장 프로그램 개발자 모드에서 “압축해제된 확장 프로그램 로드”로 등록합니다.
 
 🧩 How it works (권장 흐름)
 
